@@ -787,6 +787,12 @@ namespace components
 	void rtx::on_map_shutdown()
 	{
 		rtx_gui::skysphere_reset();
+
+		if (rtx_fixed_function::dynamic_codemesh_vb)
+		{
+			rtx_fixed_function::dynamic_codemesh_vb->Release();
+			rtx_fixed_function::dynamic_codemesh_vb = nullptr;
+		}
 	}
 
 	rtx::rtx()
