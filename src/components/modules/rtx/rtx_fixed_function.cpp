@@ -260,6 +260,11 @@ namespace components
 			// get indexbuffer offset
 			const auto offset = ((char*)drawstream->localSurf->triIndices - mem->blocks[8].data) >> 1;
 
+			if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer <= 2)
+			{
+				rtx::rb_show_tess(src, cmd, &src->matrices.matrix[0].m[3][0], "Static", game::COLOR_WHITE);
+			}
+
 			// draw the prim
 			cmd->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, drawstream->localSurf->vertCount, offset, drawstream->localSurf->triCount);
 		}
@@ -415,6 +420,11 @@ namespace components
 					popad;
 				}
 			}
+		}
+
+		if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer <= 2)
+		{
+			rtx::rb_show_tess(source, state, &mtx[3][0], "XMRigid", game::COLOR_WHITE);
 		}
 
 		// #
@@ -627,6 +637,12 @@ namespace components
 
 			// set world matrix
 			state->prim.device->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
+
+			if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer <= 2
+				&& dvars::r_showTessSkin && dvars::r_showTessSkin->current.enabled)
+			{
+				rtx::rb_show_tess(src, state, &mtx[3][0], "XMSkin", game::COLOR_WHITE);
+			}
 		}
 
 		state->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, start_index, surf->triCount);
@@ -784,6 +800,11 @@ namespace components
 				// set world matrix
 				state->prim.device->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
 
+				if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer <= 2)
+				{
+					rtx::rb_show_tess(src, state, &mtx[3][0], "StaticSkin", game::COLOR_WHITE);
+				}
+
 				// draw the prim
 				state->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, start_index, surf->triCount);
 			}
@@ -829,7 +850,7 @@ namespace components
 		return true;
 	}
 
-	void R_DrawPreTessTris(game::GfxCmdBufSourceState* src, game::GfxCmdBufPrimState* state, game::srfTriangles_t* tris, unsigned int baseIndex, unsigned int triCount)
+	void R_DrawPreTessTris(game::GfxCmdBufSourceState* src, game::GfxCmdBufState* state, game::srfTriangles_t* tris, unsigned int baseIndex, unsigned int triCount, const game::GfxSurface* surf)
 	{
 		const auto dev = game::glob::d3d9_device;
 
@@ -848,8 +869,19 @@ namespace components
 		dev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 #endif
 
+		if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer >= 3 && dvars::r_showTess->current.integer < 5)
+		{
+			const game::vec3_t center =
+			{
+				(surf->bounds[0][0] + surf->bounds[1][0]) * 0.5f,
+				(surf->bounds[0][1] + surf->bounds[1][1]) * 0.5f,
+				(surf->bounds[0][2] + surf->bounds[1][2]) * 0.5f
+			};
+			rtx::rb_show_tess(src, state, center, "BSP", game::COLOR_WHITE);
+		}
+
 		dev->SetStreamSource(0, gfx_world_vertexbuffer, WORLD_VERTEX_STRIDE * tris->firstVertex, WORLD_VERTEX_STRIDE);
-		state->device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, tris->vertexCount, baseIndex, triCount);
+		dev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, tris->vertexCount, baseIndex, triCount);
 	}
 
 	/**
@@ -886,6 +918,7 @@ namespace components
 
 		while (R_ReadBspPreTessDrawSurfs(&cmd_buf, &list, &count, &base_index))
 		{
+			game::GfxSurface* bsp_surf = nullptr;
 			game::srfTriangles_t* prev_tris = nullptr;
 			auto tri_count = 0u;
 			auto base_vertex = -1;
@@ -899,7 +932,7 @@ namespace components
 					game::Com_Error(game::ERR_DISCONNECT, "R_DrawBspDrawSurfsPreTess :: surf_index >= static_cast<unsigned>(game::rgp->world->surfaceCount)");
 				}
 
-				const auto bsp_surf = &game::rgp->world->dpvs.surfaces[surf_index];
+				bsp_surf = &game::rgp->world->dpvs.surfaces[surf_index];
 				const auto tris = &bsp_surf->tris;
 
 				if (base_vertex != bsp_surf->tris.firstVertex)
@@ -907,7 +940,7 @@ namespace components
 					// never triggers?
 					if (tri_count)
 					{
-						R_DrawPreTessTris(src, &state->prim, prev_tris, base_index, tri_count);
+						R_DrawPreTessTris(src, state, prev_tris, base_index, tri_count, bsp_surf);
 						base_index += 3 * tri_count;
 						tri_count = 0;
 					}
@@ -919,7 +952,7 @@ namespace components
 				tri_count += list[index].totalTriCount;
 			}
 
-			R_DrawPreTessTris(src, &state->prim, prev_tris, base_index, tri_count);
+			R_DrawPreTessTris(src, state, prev_tris, base_index, tri_count, bsp_surf);
 		}
 
 		// #

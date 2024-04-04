@@ -155,6 +155,11 @@ namespace dvars
 	game::dvar_s* rtx_disable_entity_culling = nullptr;
 	game::dvar_s* rtx_draw_dynents = nullptr;
 
+	game::dvar_s* r_showTess = nullptr;
+	game::dvar_s* r_showTessSkin = nullptr;
+	game::dvar_s* r_showTessDist = nullptr;
+	game::dvar_s* r_showCellIndex = nullptr;
+
 
 	game::dvar_s* r_fogTweaks = nullptr;
 	game::dvar_s* r_fogTweaksColor = nullptr;

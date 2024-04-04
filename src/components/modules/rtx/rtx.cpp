@@ -150,7 +150,102 @@ namespace components
 		}
 	}
 
-	
+	// model:	[1] techset - [2] material
+	// bsp:		[3] techset - [4] material
+	// bmodel:	[5] techset - [6] material
+	void rtx::rb_show_tess(game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const float* center, const char* name, const float* color)
+	{
+		float offset_center[3];
+		offset_center[0] = center[0];
+		offset_center[1] = center[1];
+		offset_center[2] = center[2];
+
+		const auto dist_to_str = utils::vector::distance3(source->eyeOffset, offset_center);
+
+		if (dvars::r_showTessDist)
+		{
+			if (dist_to_str > dvars::r_showTessDist->current.value && dvars::r_showTessDist->current.value != 0.0f)
+			{
+				return;
+			}
+		}
+
+		bool viewmodel_string = false;
+		auto font_scale = 0.25f;
+		if (dist_to_str < 25.0f)
+		{
+			viewmodel_string = true;
+			font_scale = 0.025f;
+		}
+
+		const game::MaterialTechnique* tech = nullptr;
+		if (state->material && state->material->techniqueSet->techniques[static_cast<std::uint8_t>(state->techType)])
+		{
+			tech = state->material->techniqueSet->techniques[static_cast<std::uint8_t>(state->techType)];
+		}
+
+		if (const auto r_showTess = game::Dvar_FindVar("r_showTess"); r_showTess && tech)
+		{
+			switch (r_showTess->current.integer)
+			{
+			case 1: // techset model
+			case 3: // techset bsp
+			case 5: // techset bmodel
+			{
+				// offset_center[2] = (((float)state->techType - 16.0f) * 0.3f) + offset_center[2];
+				// header
+				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("%s: %s", name, tech->name));
+				font_scale *= 0.5f;
+
+				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
+				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [TQ]: %s", state->material->techniqueSet->name));
+
+				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
+				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [VS] %s", tech->passArray[0].vertexShader ? tech->passArray[0].vertexShader->name : "<NONE>"));
+
+				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
+				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [PS] %s", tech->passArray[0].pixelShader ? tech->passArray[0].pixelShader->name : "<NONE>"));
+				break;
+			}
+
+			case 2: // material model
+			case 4: // material bsp
+			case 6: // material bmodel
+			{
+				// header
+				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("%s: %s", name, state->material->info.name));
+				font_scale *= 0.5f;
+
+				for (auto i = 0; i < state->material->textureCount; i++)
+				{
+					if (&state->material->textureTable[i] && state->material->textureTable[i].u.image && state->material->textureTable[i].u.image->name)
+					{
+						const auto img = state->material->textureTable[i].u.image;
+						offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
+
+						const char* semantic_str;
+						switch (static_cast<std::uint8_t>(img->semantic))
+						{
+						case 0: semantic_str = "2D"; break;
+						case 1: semantic_str = "F"; break;
+						case 2: semantic_str = "C"; break;
+						case 5: semantic_str = "N"; break;
+						case 8: semantic_str = "S"; break;
+						case 11: semantic_str = "W"; break;
+						default: semantic_str = "C+"; break;
+						}
+
+						game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [%s] %s", semantic_str, img->name)); // static_cast<std::uint8_t>(img->semantic)
+					}
+				}
+				break;
+			}
+
+			default:
+				break;
+			}
+		}
+	}
 
 	/**
 	 * @brief spawns a little triangle at the origin of the player that is marked as 'player model body texture'
@@ -967,6 +1062,36 @@ namespace components
 			/* desc		*/ "Force LOD of static models to the second lowest LOD (should keep grass, rocks, trees ... visible)\nSet r_forceLod to anything but none for this to work",
 			/* default	*/ true,
 			/* flags	*/ game::dvar_flags::saved);
+
+		static const char* r_showTess_enum[] = { "off", "model_techset", "model_material", "bsp_techset", "bsp_material", "bmodel_techset", "bmodel_material" };
+		dvars::r_showTess = game::Dvar_RegisterEnum(
+			/* name		*/ "r_showTess",
+			/* desc		*/ "surface data info",
+			/* default	*/ 0,
+			/* enumSize */ 7,
+			/* enumData */ r_showTess_enum,
+			/* flags	*/ game::dvar_flags::none
+		);
+
+		dvars::r_showTessSkin = game::Dvar_RegisterBool(
+			/* name		*/ "r_showTessSkin",
+			/* desc		*/ "show skinned surface info",
+			/* default	*/ false,
+			/* flags	*/ game::dvar_flags::none);
+
+		dvars::r_showTessDist = game::Dvar_RegisterFloat(
+			/* name		*/ "r_showTessDist",
+			/* desc		*/ "radius in which to draw r_showTess debug strings",
+			/* default	*/ 400.0f,
+			/* min		*/ 0.0f,
+			/* max		*/ 10000.0f,
+			/* flags	*/ game::dvar_flags::saved);
+
+		dvars::r_showCellIndex = game::Dvar_RegisterBool(
+			/* name		*/ "r_showCellIndex",
+			/* desc		*/ "draw cell index at the center of current cell (useful for map_settings)",
+			/* default	*/ false,
+			/* flags	*/ game::dvar_flags::none);
 
 #if DEBUG
 		command::add("dump_modes", "", "", [this](command::params)

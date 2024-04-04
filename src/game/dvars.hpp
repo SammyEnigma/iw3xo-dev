@@ -162,6 +162,12 @@ namespace dvars
 	extern game::dvar_s* rtx_disable_entity_culling;
 	extern game::dvar_s* rtx_draw_dynents;
 
+	extern game::dvar_s* r_showTess;
+	extern game::dvar_s* r_showTessSkin;
+	extern game::dvar_s* r_showTessDist;
+	extern game::dvar_s* r_showCellIndex;
+
+
 	extern game::dvar_s* r_fogTweaks;
 	extern game::dvar_s* r_fogTweaksColor;
 	extern game::dvar_s* r_fogTweaksStart;
