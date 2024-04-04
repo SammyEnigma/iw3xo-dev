@@ -178,7 +178,11 @@ namespace game
 	extern game::GfxBackEndData* _frontEndDataOut;
 	//extern game::GfxBackEndData* _backEndData;
 
-	static DWORD* backEndDataOut_ptr = (DWORD*)(0xD0704BC);  // backendEndDataOut pointer
+	static inline IDirect3DDevice9* get_device() { return game::dx->device; }
+
+	static DWORD* frontEndDataOut_ptr = (DWORD*)(0xCC9827C);
+	extern game::GfxBackEndData* get_frontenddata();
+	static DWORD* backEndDataOut_ptr = (DWORD*)(0xD0704BC);
 	extern game::GfxBackEndData* get_backenddata();
 
 	extern game::r_globals_t* rg;

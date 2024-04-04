@@ -234,8 +234,14 @@ namespace game
 	game::GfxCmdBufState*	gfxCmdBufState = reinterpret_cast<game::GfxCmdBufState*>(0xD5404F0);
 
 	game::materialCommands_t* tess = reinterpret_cast<game::materialCommands_t*>(0xD085EE0);
-	game::GfxBackEndData* _frontEndDataOut = reinterpret_cast<game::GfxBackEndData*>(0xCC9827C);
+	//game::GfxBackEndData* _frontEndDataOut = reinterpret_cast<game::GfxBackEndData*>(0xCC9827C);
 	//game::GfxBackEndData* _backEndData = reinterpret_cast<game::GfxBackEndData*>(0xD0704BC);
+
+	game::GfxBackEndData* get_frontenddata()
+	{
+		const auto out = reinterpret_cast<game::GfxBackEndData*>(*game::frontEndDataOut_ptr);
+		return out;
+	}
 
 	game::GfxBackEndData* get_backenddata()
 	{
