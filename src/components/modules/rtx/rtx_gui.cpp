@@ -2,6 +2,41 @@
 
 namespace components
 {
+	/**
+	 * @param title_text	text in between separator lines
+	 * @param pre_spacing	spacing in front of separator
+	 * @param width			0.0 => full window width
+	 * @param post_spacing	spacing applied after separator
+	 * @param thickness		thickness of separator line
+	 */
+	void title_inside_seperator(const char* title_text, bool pre_spacing, float width, float post_spacing, float thickness)
+	{
+		ImGui::BeginGroup();
+		if (pre_spacing) SPACING(0.0f, 12.0f);
+		if (width == 0.0f) width = ImGui::GetContentRegionAvail().x - 8.0f;
+
+		const float text_spacing = 6.0f;
+		const auto text_size = ImGui::CalcTextSize(title_text, nullptr, true);
+		const float first_sep_width = (width * 0.1f);
+
+		ImVec2 seperator_pos = ImGui::GetCursorScreenPos();
+		seperator_pos.y += (text_size.y * 0.5f);
+
+		ImGui::GetWindowDrawList()->AddLine(seperator_pos, ImVec2(seperator_pos.x + first_sep_width, seperator_pos.y), ImGui::GetColorU32(ImGuiCol_HeaderActive), thickness);
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + first_sep_width + text_spacing);
+		ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ImGui::GetColorU32(ImGuiCol_HeaderActive)), title_text);
+		ImGui::SameLine(0.0f, text_spacing);
+
+		seperator_pos = ImGui::GetCursorScreenPos();
+		seperator_pos.y += (text_size.y * 0.5f);
+
+		const auto second_sep_width = width - text_size.x - first_sep_width - (text_spacing * 2.0f);
+		ImGui::GetWindowDrawList()->AddLine(seperator_pos, ImVec2(seperator_pos.x + second_sep_width, seperator_pos.y), ImGui::GetColorU32(ImGuiCol_HeaderActive), thickness);
+
+		SPACING(0.0f, post_spacing);
+		ImGui::EndGroup();
+	}
+
 	void rtx_gui::gui()
 	{
 		ImGui::Indent(8.0f);
@@ -13,6 +48,7 @@ namespace components
 			const auto& fx_enable = game::Dvar_FindVar("fx_enable");
 			ImGui::Checkbox("Enable FX", &fx_enable->current.enabled);
 
+			ImGui::SameLine(280, 0);
 			const auto& r_drawdecals = game::Dvar_FindVar("r_drawdecals");
 			ImGui::Checkbox("Enable Decals", &r_drawdecals->current.enabled);
 			TT("Assign material categories 'Decal' and 'Dynamic Decal' to all decal surfaces\n"
@@ -23,29 +59,68 @@ namespace components
 			TT("Replaces the skybox with a placeholder texture that can be set as sky.\n"
 			   "It`s recommended to keep this enabled!");
 
+			ImGui::SameLine(280, 0);
 			const auto& rtx_extend_smodel_drawing = game::Dvar_FindVar("rtx_extend_smodel_drawing");
 			ImGui::Checkbox("Increase static model limit", &rtx_extend_smodel_drawing->current.enabled);
 			TT("The game has a hard limit on how many static models it can draw at once (warning print in console).\n"
 			   "Enabling this setting will disable that limit but might cause instability.");
 
-			if (dvars::rtx_disable_entity_culling)
+			SPACING(0.0f, 4.0f);
+			if (ImGui::Button("Reload Mapsettings.ini", ImVec2(ImGui::GetContentRegionAvail().x - 8.0f, 0)))
 			{
-				ImGui::Checkbox("Disable Entity Culling", &dvars::rtx_disable_entity_culling->current.enabled);
-				TT(dvars::rtx_disable_entity_culling->description);
+				rtx_map_settings::get()->set_settings_for_loaded_map(true);
 			}
 
-			if (dvars::rtx_disable_world_culling)
+			// ------------------
+			title_inside_seperator("Culling", true, 0.0f, true, 2.0f);
+
+			if (rtx::OLD_CULLING_ACTIVE)
 			{
-				ImGui::SliderInt("World Culling", &dvars::rtx_disable_world_culling->current.integer, 0, 3,
-												  rtx::rtx_disable_world_culling_enum[dvars::rtx_disable_world_culling->current.integer]);
-				TT(dvars::rtx_disable_world_culling->description);
+				if (dvars::rtx_disable_entity_culling)
+					ImGui::Checkbox("Disable Entity Culling", &dvars::rtx_disable_entity_culling->current.enabled);TT(dvars::rtx_disable_entity_culling->description);
+
+				if (dvars::rtx_disable_world_culling)
+					ImGui::SliderInt("World Culling", &dvars::rtx_disable_world_culling->current.integer, 0, 3,
+						rtx::rtx_disable_world_culling_enum[dvars::rtx_disable_world_culling->current.integer]); TT(dvars::rtx_disable_world_culling->description);
 			}
+			else
+			{
+				if (dvars::rtx_culling_tweak_mins)
+					ImGui::Checkbox("Tweak Culling (Mins)", &dvars::rtx_culling_tweak_mins->current.enabled); TT(dvars::rtx_culling_tweak_mins->description);
+
+				ImGui::SameLine(280, 0);
+				if (dvars::rtx_culling_tweak_maxs)
+					ImGui::Checkbox("Tweak Culling (Maxs)", &dvars::rtx_culling_tweak_maxs->current.enabled); TT(dvars::rtx_culling_tweak_maxs->description);
+
+				if (dvars::rtx_culling_tweak_frustum)
+					ImGui::Checkbox("Tweak Culling (Frustum)", &dvars::rtx_culling_tweak_frustum->current.enabled); TT(dvars::rtx_culling_tweak_frustum->description);
+
+				ImGui::SameLine(280, 0);
+				if (dvars::rtx_culling_tweak_smodel)
+					ImGui::Checkbox("Tweak Culling (Static Models)", &dvars::rtx_culling_tweak_smodel->current.enabled); TT(dvars::rtx_culling_tweak_smodel->description);
+
+				SPACING(0.0f, 4.0f);
+				if (ImGui::CollapsingHeader("Frustumplanes"))
+				{
+					for (auto i = 0u; i < rtx::FRUSTUM_PLANE_OFFSETS_COUNT; i++)
+					{
+						ImGui::DragFloat(utils::va("Frustumplane Offset [%d]", i), &rtx::m_frustum_plane_offsets[i], 
+							1.0f, -20000.0f, 20000.0f, "%.0f");
+					}
+				}
+			}
+
+			// ------------------
+			title_inside_seperator("Dev Settings", true, 0.0f, true, 2.0f);
+
+			if (dvars::r_showCellIndex)
+				ImGui::Checkbox("Show Cell Indices (Portal)", &dvars::r_showCellIndex->current.enabled); TT(dvars::r_showCellIndex->description);
 
 #if DEBUG
 			ImGui::DragInt("D3D Alpha Blend Setting", &rtx_gui::d3d_alpha_blend, 0.025f, 0, 16);
 #endif
 
-			ImGui::Indent(-8.0f); SPACING(0.0f, 4.0f);
+			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
 		if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen))
@@ -131,8 +206,8 @@ namespace components
 				{
 					if (dvars::rtx_sky_follow_player)
 					{
-						ImGui::SameLine(0, 30.0f);
-						ImGui::Checkbox("Follow player", &dvars::rtx_sky_follow_player->current.enabled);
+						ImGui::SameLine(180, 0.0f);
+						ImGui::Checkbox("Follow player ", &dvars::rtx_sky_follow_player->current.enabled);
 					}
 				}
 				gui::center_horz_end(skygroup03_width);
@@ -140,7 +215,17 @@ namespace components
 
 			if (sky_valid)
 			{
-				SPACING(4.0f, 0);
+				static float skygroup04_width = 0.0f;
+				gui::center_horz_begin(skygroup04_width);
+				{
+					ImGui::PushItemWidth(90.0f);
+					ImGui::DragFloat("Speed", &skysphere_auto_rotation_speed, 0.01f, 0.01f, 10.0f, "%.2f");
+					ImGui::PopItemWidth();
+
+					ImGui::SameLine(180, 0.0f);
+					ImGui::Checkbox("Auto Rotation", &skysphere_auto_rotation);
+					gui::center_horz_end(skygroup04_width);
+				}
 
 				if (ImGui::DragFloat3("Sphere Origin", rtx_gui::skysphere_model_origin, 1.0f, -360.0f, 360.0f, "%.2f"))
 				{
@@ -151,15 +236,9 @@ namespace components
 				{
 					skysphere_update_pos();
 				}
-
-				//ImGui::SameLine();
-				ImGui::Checkbox("Auto Rotation", &skysphere_auto_rotation);
-				ImGui::SameLine();
-
-				ImGui::PushItemWidth(90.0f);
-				ImGui::DragFloat("Speed", &skysphere_auto_rotation_speed, 0.01f, 0.01f, 10.0f, "%.2f");
-				ImGui::PopItemWidth();
 			}
+
+			SPACING(0.0f, 4.0f);
 
 			if (dvars::rtx_sky_hacks)
 			{
@@ -213,7 +292,7 @@ namespace components
 				}
 			}
 
-			ImGui::Indent(-8.0f); SPACING(0.0f, 4.0f);
+			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
 		if (ImGui::CollapsingHeader("Debug Light", ImGuiTreeNodeFlags_None))
@@ -253,12 +332,15 @@ namespace components
 
 					if (!rtx_lights::rtx_debug_lights[i].enable)
 					{
+						ImGui::SameLine(160, 0.0f);
+						ImGui::PushItemWidth(ImGui::CalcItemWidth() - 140.0f);
 						const char* LIGHT_TYPES[4] = { "None", "Point", "Spot", "Directional" };
 						if (ImGui::SliderInt("Type", (int*)&rtx_lights::rtx_debug_lights[i].type, 1, 3, LIGHT_TYPES[rtx_lights::rtx_debug_lights[i].type]))
 						{
 							rtx_lights::rtx_debug_lights[i].virgin = true;
 							on_edit = true;
 						}
+						ImGui::PopItemWidth();
 					}
 					else
 					{
@@ -356,18 +438,20 @@ namespace components
 
 						if (rtx_lights::rtx_debug_lights[i].type != D3DLIGHT_DIRECTIONAL)
 						{
+							SPACING(0.0f, 4.0f);
+
 							if (ImGui::Checkbox("Attach light to head", &rtx_lights::rtx_debug_lights[i].attach_to_head))
 							{
 								rtx_lights::rtx_debug_lights[i].attach_to_weapon = false;
 							}
 
-							ImGui::SameLine(0, 20.0f);
+							ImGui::SameLine(0, 30);
 							if (ImGui::Checkbox("Attach light to weapon", &rtx_lights::rtx_debug_lights[i].attach_to_weapon))
 							{
 								rtx_lights::rtx_debug_lights[i].attach_to_head = false;
 							}
 
-							if (ImGui::Button("Move light to player"))
+							if (ImGui::Button("Move light to player", ImVec2(ImGui::GetContentRegionAvail().x - 8.0f, 0.0f)))
 							{
 								utils::vector::copy(game::cgs->predictedPlayerState.origin, rtx_lights::rtx_debug_lights[i].origin, 3);
 								rtx_lights::rtx_debug_lights[i].origin[2] += 60.0f;
@@ -377,6 +461,8 @@ namespace components
 									utils::vector::angle_to_forward(game::cgs->predictedPlayerState.viewangles, rtx_lights::rtx_debug_lights[i].dir);
 								}
 							}
+
+							SPACING(0.0f, 8.0f);
 						}
 
 						if (on_edit)
@@ -399,7 +485,7 @@ namespace components
 				ImGui::PopID();
 			}
 
-			ImGui::Indent(-8.0f); SPACING(0.0f, 4.0f);
+			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
 		if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
@@ -432,7 +518,7 @@ namespace components
 			//ImGui::DragFloat("r_lowLodDist", &r_lowLodDist->current.value, 0.1f);
 			//ImGui::DragFloat("r_lowestLodDist", &r_lowestLodDist->current.value, 0.1f);
 
-			ImGui::Indent(-8.0f); SPACING(0.0f, 4.0f);
+			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 	}
 

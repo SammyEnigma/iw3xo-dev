@@ -381,8 +381,18 @@ namespace components
 		game::GfxColor color = {};
 		game::R_ConvertColorToBytes(brush_color, (char *)&color);
 
+	
+		game::Material* poly_material = game::rgp->lineMaterial;
+		if (components::active.rtx)
+		{
+			if (const auto material = game::Material_RegisterHandle("iw3xo_showcollision_wire", 3); material)
+			{
+				poly_material = material;
+			}
+		}
+
 		// check render-surface overflow
-		if (game::gfxCmdBufState->origMaterial != game::rgp->lineMaterial || game::gfxCmdBufState->origTechType != game::MaterialTechniqueType::TECHNIQUE_UNLIT)
+		if (game::gfxCmdBufState->origMaterial != poly_material || game::gfxCmdBufState->origTechType != game::MaterialTechniqueType::TECHNIQUE_UNLIT)
 		{
 			// draw / skip left over polys
 			if (game::tess->indexCount)
@@ -411,7 +421,7 @@ namespace components
 			else
 			{
 				// patch default line material so that it uses Blend and PolyOffset
-				const auto unlit_material = game::rgp->lineMaterial;//reinterpret_cast<game::Material*>(*(DWORD32*)(game::builtIn_material_unlit_depth));
+				auto unlit_material = poly_material; //reinterpret_cast<game::Material*>(*(DWORD32*)(game::builtIn_material_unlit_depth));
 
 				// fill poly on both sides
 				if (two_sides_poly)
@@ -429,7 +439,7 @@ namespace components
 				unlit_material->stateBitsTable->loadBits[1] = 44;
 
 				// start poly
-				game::RB_BeginSurface(game::MaterialTechniqueType::TECHNIQUE_UNLIT, depth_check ? game::rgp->lineMaterial : game::rgp->lineMaterialNoDepth);
+				game::RB_BeginSurface(game::MaterialTechniqueType::TECHNIQUE_UNLIT, depth_check ? unlit_material : game::rgp->lineMaterialNoDepth);
 			}
 		}
 

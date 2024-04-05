@@ -237,6 +237,8 @@ namespace game
 	//game::GfxBackEndData* _frontEndDataOut = reinterpret_cast<game::GfxBackEndData*>(0xCC9827C);
 	//game::GfxBackEndData* _backEndData = reinterpret_cast<game::GfxBackEndData*>(0xD0704BC);
 
+	game::DpvsGlob* dpvsGlob = reinterpret_cast<game::DpvsGlob*>(0xD065368);
+
 	game::GfxBackEndData* get_frontenddata()
 	{
 		const auto out = reinterpret_cast<game::GfxBackEndData*>(*game::frontEndDataOut_ptr);
@@ -546,6 +548,37 @@ namespace game
 			mov		eax, [text];
 			call	R_TextWidth_func;
 			add		esp, 8;
+		}
+	}
+
+	// #
+	// portal related
+
+	void R_AddCellSurfacesAndCullGroupsInFrustumDelayed(GfxCell* cell /*eax*/, DpvsPlane* planes /*edi*/, int planeCount, int frustumPlaneCount)
+	{
+		const static uint32_t func_addr = 0x609890;
+		__asm
+		{
+			push	frustumPlaneCount;
+			push	planeCount;
+			mov		edi, planes;
+			mov		eax, cell;
+			call	func_addr;
+			add		esp, 8;
+		}
+	}
+
+	void R_VisitPortals(int plane_count /*eax*/, GfxCell* cell, DpvsPlane* parent_plane, DpvsPlane* planes)
+	{
+		const static uint32_t func_addr = 0x60A2F0;
+		__asm
+		{
+			push	planes;
+			push	parent_plane;
+			push	cell;
+			mov		eax, plane_count;
+			call	func_addr;
+			add		esp, 12;
 		}
 	}
 

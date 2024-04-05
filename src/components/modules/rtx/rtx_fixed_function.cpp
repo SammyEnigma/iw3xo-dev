@@ -1027,10 +1027,21 @@ namespace components
 #ifdef TESS_TESTS
 	namespace tess
 	{
+		void RB_DrawPolyInteriors_RB_BeginSurface()
+		{
+			if (const auto material = game::Material_RegisterHandle("iw3xo_showcollision_wire", 3); material)
+			{
+				game::RB_BeginSurface(game::TECHNIQUE_UNLIT, material);
+				return;
+			}
+
+			game::Com_Error(game::ERR_DISCONNECT, "Failed to find material 'iw3xo_showcollision_wire'");
+		}
+
 		int use_custom_tess_func()
 		{
 			if (const auto str = std::string_view(game::gfxCmdBufState->material->info.name);
-				str == "$line" || str == "$line_nodepth" || str == "iw3xo_showcollision_wire")
+				/*str == "$line" || str == "$line_nodepth" ||*/ str == "iw3xo_showcollision_wire")
 			{
 				return 1;
 			}
@@ -1093,17 +1104,28 @@ namespace components
 
 			set_stream_source(state, dyn_vb->buffer, vert_offset, DEBUG_VERT_STRIDE);
 
+			IDirect3DVertexShader9* og_vertexshader;
+			IDirect3DPixelShader9* og_pixelshader;
+			dev->GetVertexShader(&og_vertexshader);
+			dev->GetPixelShader(&og_pixelshader);
+
 			// needed or game renders mesh with shaders
 			dev->SetVertexShader(nullptr);
 			dev->SetPixelShader(nullptr);
 
 			DWORD og_cullmode, og_alphablend;
+			IDirect3DBaseTexture9* og_texture;
+
 			dev->GetRenderState(D3DRS_CULLMODE, &og_cullmode);
 			dev->GetRenderState(D3DRS_ALPHABLENDENABLE, &og_alphablend);
+			dev->GetTexture(0, &og_texture);
 
 			dev->SetRenderState(D3DRS_LIGHTING, FALSE);
 			dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-			dev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+
+			//if (const auto var = game::Dvar_FindVar("r_showPortals"); var && var->current.enabled)
+				dev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+			//else dev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 
 			// set random texture not used for anything else (remix-wise)
 			const auto img = game::DB_FindXAssetHeader(game::ASSET_TYPE_IMAGE, "$identitynormalmap").image; // $identitynormalmap
@@ -1127,6 +1149,11 @@ namespace components
 
 			dev->SetRenderState(D3DRS_CULLMODE, og_cullmode);
 			dev->SetRenderState(D3DRS_ALPHABLENDENABLE, og_alphablend);
+
+			dev->SetVertexShader(og_vertexshader);
+			dev->SetPixelShader(og_pixelshader);
+
+			dev->SetTexture(0, og_texture);
 		}
 
 		__declspec(naked) void draw_tess_tech_stub()
@@ -1433,6 +1460,7 @@ namespace components
 		// fixed-function rendering of debug visualizations / 2d etc .. RB_EndTessSurface-> R_DrawTessTechnique
 		// - currently only working "good" on debug collision polygons (lines-only are messed up)
 		utils::hook(0x61A36F, tess::draw_tess_tech_stub, HOOK_JUMP).install()->quick();
+		utils::hook(0x6582B2, tess::RB_DrawPolyInteriors_RB_BeginSurface, HOOK_CALL).install()->quick();
 #endif
 		// ----
 

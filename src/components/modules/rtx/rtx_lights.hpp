@@ -10,7 +10,7 @@ namespace components
 
 		static void spawn_light();
 
-		static constexpr auto RTX_DEBUGLIGHT_AMOUNT = 16;
+		static constexpr auto RTX_DEBUGLIGHT_AMOUNT = 8;
 
 		struct rtx_debug_light
 		{

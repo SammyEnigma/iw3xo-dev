@@ -487,6 +487,15 @@ namespace components
 					SPACING(0.0f, 4.0f); ImGui::Indent(-8.0f);
 				}
 			}
+			else // if rtx
+			{
+				if (ImGui::CollapsingHeader("Brush Visuals"))
+				{
+					ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
+					ImGui::SliderFloat("Polygon Alpha", gui::dvar_get_set<float*>(dvars::r_drawCollision_polyAlpha), dvars::r_drawCollision_polyAlpha->domain.value.min, dvars::r_drawCollision_polyAlpha->domain.value.max, "%.2f"); TT("r_drawCollision_polyAlpha");
+					SPACING(0.0f, 4.0f); ImGui::Indent(-8.0f);
+				}
+			}
 
 			// *
 			if (ImGui::CollapsingHeader("Hud"))

@@ -61,6 +61,9 @@ namespace game
 
 	static inline float COLOR_WHITE[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	static inline float COLOR_BLACK[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	static inline float COLOR_RED[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+	static inline float COLOR_GREEN[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+	static inline float COLOR_BLUE[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	static inline float vec3_origin[3] = { 0.0f, 0.0f, 0.0f };
 
 	extern game::TestLod g_testLods[4];
@@ -175,11 +178,9 @@ namespace game
 	extern game::GfxCmdBufState* gfxCmdBufState;
 
 	extern game::materialCommands_t* tess;
-	extern game::GfxBackEndData* _frontEndDataOut;
-	//extern game::GfxBackEndData* _backEndData;
+	extern game::DpvsGlob* dpvsGlob;
 
 	static inline IDirect3DDevice9* get_device() { return game::dx->device; }
-
 	static DWORD* frontEndDataOut_ptr = (DWORD*)(0xCC9827C);
 	extern game::GfxBackEndData* get_frontenddata();
 	static DWORD* backEndDataOut_ptr = (DWORD*)(0xD0704BC);
@@ -242,6 +243,8 @@ namespace game
 	void CG_DrawRotatedPicPhysical(ScreenPlacement* place, float a2, float a3, float a4, float a5, float a6, float *color, void* material);
 	int  R_TextWidth(const char *text /*<eax*/, int maxChars, game::Font_s *font); // ASM
 
+	void R_AddCellSurfacesAndCullGroupsInFrustumDelayed(GfxCell* cell /*eax*/, DpvsPlane* planes /*edi*/, int planeCount, int frustumPlaneCount); // ASM
+	void R_VisitPortals(int plane_count /*eax*/, GfxCell* cell, DpvsPlane* parent_plane, DpvsPlane* planes); // ASM
 
 	// *
 	// ui

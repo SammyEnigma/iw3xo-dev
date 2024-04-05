@@ -7355,6 +7355,48 @@ namespace game
 	}; STATIC_ASSERT_SIZE(r_global_permanent_t, 0x2180);
 #pragma warning( pop )
 
+	struct PortalHeapNode
+	{
+		GfxPortal* portal;
+		float dist;
+	};
+
+	union GfxHullPointsPool
+	{
+		GfxHullPointsPool* nextFree;
+		float points[64][2];
+	};
+
+	struct DpvsView
+	{
+		unsigned int renderFxFlagsCull;
+		DpvsPlane frustumPlanes[14];
+		int frustumPlaneCount;
+	};
+
+	struct DpvsGlob
+	{
+		DpvsPlane viewPlane;
+		DpvsPlane fogPlane;
+		DpvsPlane* nearPlane;
+		DpvsPlane* farPlane;
+		GfxMatrix* viewProjMtx;
+		GfxMatrix* invViewProjMtx;
+		float viewOrg[4];
+		int viewOrgIsDir;
+		int queuedCount;
+		PortalHeapNode* portalQueue;
+		GfxHullPointsPool* nextFreeHullPoints;
+		float cullDist;
+		DpvsPlane childPlanes[2048];
+		DpvsView views[4][3];
+		unsigned int cameraCellIndex;
+		DpvsPlane* sideFrustumPlanes;
+		unsigned int* entVisBits[4];
+		unsigned int* cellBits;
+		unsigned int cellVisibleBits[32];
+	};
+
 	struct Image_MemUsage
 	{
 		int total;

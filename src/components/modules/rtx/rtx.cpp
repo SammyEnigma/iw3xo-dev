@@ -570,6 +570,203 @@ namespace components
 
 	namespace cull
 	{
+		int _last_active_valid_cell = -1;
+		void R_AddWorldSurfacesPortalWalk_hk(int camera_cell_index, game::DpvsView* dpvs)
+		{
+			//const auto dpvsGlob = reinterpret_cast<game::DpvsGlob*>(0x3957100);
+
+			const auto dpvsGlob = game::dpvsGlob;
+
+			// never show the complete map, only the last valid cell
+			if (camera_cell_index < 0)
+			{
+				const auto cell = &game::rgp->world->cells[_last_active_valid_cell];
+				const auto cell_index = cell - game::rgp->world->cells;
+				game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
+				dpvsGlob->cellVisibleBits[(cell_index >> 5) + 3] |= (1 << (cell_index & 0x1F)); // is the +3 correct here?
+			}
+			else
+			{
+				_last_active_valid_cell = camera_cell_index;
+
+				// hack - disable most frustum culling
+				dpvsGlob->views[0][0].frustumPlanes[0].coeffs[3] += rtx::m_frustum_plane_offsets[0]; //5000.0f;
+				dpvsGlob->views[0][0].frustumPlanes[1].coeffs[3] += rtx::m_frustum_plane_offsets[1];
+				dpvsGlob->views[0][0].frustumPlanes[2].coeffs[3] += rtx::m_frustum_plane_offsets[2];
+				dpvsGlob->views[0][0].frustumPlanes[3].coeffs[3] += rtx::m_frustum_plane_offsets[3];
+				dpvsGlob->views[0][0].frustumPlanes[4].coeffs[3] += rtx::m_frustum_plane_offsets[4];
+				dpvsGlob->views[0][0].frustumPlanes[5].coeffs[3] += rtx::m_frustum_plane_offsets[5];
+				dpvsGlob->viewPlane.coeffs[3] += rtx::m_frustum_plane_offsets[6]; //5000.0f;
+				// ^ needs to be viewPlane here?
+
+
+				// #
+				// always add full cell the player is in (same as r_singlecell)
+				const auto cell = &game::rgp->world->cells[camera_cell_index];
+				const auto cell_index = cell - game::rgp->world->cells;
+
+				game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount); // dpvs->frustumPlaneCount
+				dpvsGlob->cellVisibleBits[(cell_index >> 5) + 3] |= (1 << (cell_index & 0x1F));
+
+
+				// #
+				// draw cell index at the center of the current cell
+				if (dvars::r_showCellIndex && dvars::r_showCellIndex->current.enabled)
+				{
+					const game::vec3_t center =
+					{
+						(cell->mins[0] + cell->maxs[0]) * 0.5f,
+						(cell->mins[1] + cell->maxs[1]) * 0.5f,
+						(cell->mins[2] + cell->maxs[2]) * 0.5f
+					};
+
+					game::R_AddDebugString(&game::get_frontenddata()->debugGlobals, center, game::COLOR_GREEN, 1.0f, utils::va("Cell Index: %d", camera_cell_index));
+
+					const game::vec4_t col = { 1.0f, 1.0f, 1.0f, 1.0f };
+					game::draw_text_with_engine(
+						/* x	*/ 50.0f,
+						/* y	*/ 500.0f,
+						/* scaX */ 1,
+						/* scaY */ 1,
+						/* font */ _cg::get_font_for_style(dvars::pm_hud_fontStyle->current.integer),
+						/* colr */ col,
+						/* txt	*/ utils::va("Current Cell: %d", camera_cell_index));
+				}
+
+
+				// #
+				// force cells defined in map_settings.ini
+
+				/*const auto& cell_settings = map_settings::settings()->cell_settings;
+				if (!cell_settings.empty())
+				{
+					for (const auto& c : cell_settings)
+					{
+						if (c.cell_index == camera_cell_index)
+						{
+							for (const auto& i : c.forced_cell_indices)
+							{
+								const auto forced_cell = &game::sp::rgp->world->cells[i];
+								const auto c_index = forced_cell - game::sp::rgp->world->cells;
+								game::sp::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(forced_cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
+								dpvsGlob->cellVisibleBits[(c_index >> 5) + 3] |= (1 << (c_index & 0x1F)) & ~((1 << (c_index & 0x1F)) & dpvsGlob->cellForceInvisibleBits[(c_index >> 5) + 3]);
+							}
+
+							break;
+						}
+					}
+				}*/
+
+				// R_VisitPortals
+				//utils::hook::call<void(__cdecl)(game::GfxCell*, game::DpvsPlane*, game::DpvsPlane*, int)>(0x6B3DA0)(cell, &dpvsGlob->nearPlane, dpvs->frustumPlanes, dpvs->frustumPlaneCount);
+				game::R_VisitPortals(dpvs->frustumPlaneCount, cell, &dpvsGlob->viewPlane, dpvs->frustumPlanes); // viewplane here .. or is that the nearplane?
+			}
+		}
+
+		__declspec(naked) void cell_stub()
+		{
+			const static uint32_t retn_addr = 0x60B08F;
+			__asm
+			{
+				// ebx = world
+				// esi = cameraCellIndex
+				// eax = DpvsView
+
+				push	eax;
+				push	esi;
+				call	R_AddWorldSurfacesPortalWalk_hk;
+				add		esp, 8;
+				jmp		retn_addr;
+			}
+		}
+
+		// #
+		// # tweakable culling dvars
+		
+		__declspec(naked) void disable_mins_culling_stub()
+		{
+			const static uint32_t stock_addr = 0x643B08;
+			const static uint32_t disable_culling_addr = 0x643B0E;
+			__asm
+			{
+				// jump if culling is less or disabled
+				cmp		rtx::loc_culling_tweak_mins, 1;
+				je		SKIP;
+
+				fnstsw  ax;
+				test    ah, 0x41;
+				jmp		stock_addr;
+
+				SKIP:
+				jmp		disable_culling_addr;
+			}
+		}
+
+		__declspec(naked) void disable_maxs_culling_stub()
+		{
+			const static uint32_t stock_addr = 0x643B39;
+			const static uint32_t disable_culling_addr = 0x643B48;
+			__asm
+			{
+				// jump if culling is less or disabled
+				cmp		rtx::loc_culling_tweak_maxs, 1;
+				je		SKIP;
+
+				fnstsw  ax;
+				test    ah, 1;
+				jmp		stock_addr;
+
+			SKIP:
+				jmp		disable_culling_addr;
+			}
+		}
+
+		__declspec(naked) void disable_frustum_culling_stub()
+		{
+			const static uint32_t stock_addr = 0x643D44;
+			const static uint32_t disable_culling_addr = 0x643D80;
+			__asm
+			{
+				// og
+				xor		ecx, ecx;
+
+				// jump if culling is less or disabled
+				cmp		rtx::loc_culling_tweak_frustum, 1;
+				je		SKIP;
+
+				cmp		[esp + 0x54], ecx;
+				jmp		stock_addr;
+
+			SKIP:
+				jmp		disable_culling_addr;
+			}
+		}
+
+		__declspec(naked) void disable_smodel_culling_stub()
+		{
+			const static uint32_t stock_addr = 0x643C79;
+			const static uint32_t disable_culling_addr = 0x643CB5;
+			__asm
+			{
+				// og
+				xor		ecx, ecx;
+
+				// jump if culling is less or disabled
+				cmp		rtx::loc_culling_tweak_smodel, 1;
+				je		SKIP;
+
+				cmp		[esp + 0x54], ecx;
+				jmp		stock_addr;
+
+			SKIP:
+				jmp		disable_culling_addr;
+			}
+		}
+
+#pragma region OLD_CULLING
+		// #
+		// old anti culling - active if flag 'old_anti_culling' is set
+
 		// R_AddWorldSurfacesPortalWalk
 		__declspec(naked) void world_stub_01()
 		{
@@ -707,6 +904,7 @@ namespace components
 				jmp		retn_skip;
 			}
 		}
+#pragma endregion
 	}
 
 
@@ -717,6 +915,15 @@ namespace components
 	{
 		// update culling vars at the end of a frame (so we don't change culling behaviour mid-frame -> not safe)
 		{
+			if (dvars::rtx_culling_tweak_mins) loc_culling_tweak_mins = dvars::rtx_culling_tweak_mins->current.enabled;
+			if (dvars::rtx_culling_tweak_maxs) loc_culling_tweak_maxs = dvars::rtx_culling_tweak_maxs->current.enabled;
+			if (dvars::rtx_culling_tweak_frustum) loc_culling_tweak_frustum = dvars::rtx_culling_tweak_frustum->current.enabled;
+			if (dvars::rtx_culling_tweak_smodel) loc_culling_tweak_smodel = dvars::rtx_culling_tweak_smodel->current.enabled;
+
+			// #
+			// old anti culling - activ if flag 'old_anti_culling' is set
+
+
 			// update world culling
 			if (dvars::rtx_disable_world_culling)
 			{
@@ -730,6 +937,12 @@ namespace components
 			{
 				loc_disable_entity_culling = dvars::rtx_disable_entity_culling->current.enabled ? 1 : 0;
 			}
+		}
+
+		// draw portal cells if r_showCellIndex is true
+		if (dvars::r_showCellIndex)
+		{
+			dvars::int_override("r_showPortals", dvars::r_showCellIndex->current.enabled);
 		}
 
 		// #
@@ -958,7 +1171,10 @@ namespace components
 		// *
 		// culling
 
+		if (flags::has_flag("old_anti_culling"))
 		{
+			OLD_CULLING_ACTIVE = true;
+
 			// R_AddWorldSurfacesPortalWalk :: less culling .. // 0x60B02E -> jl to jmp // 0x7C -> 0xEB //utils::hook::set<BYTE>(0x60B02E, 0xEB);
 			utils::hook::nop(0x60B028, 6); utils::hook(0x60B028, cull::world_stub_01, HOOK_JUMP).install()->quick();
 
@@ -999,6 +1215,64 @@ namespace components
 				/* default	*/ true,
 				/* flags	*/ game::dvar_flags::saved);
 		}
+		else // new way of culling
+		{
+			// rewrite some logic in 'R_AddWorldSurfacesPortalWalk'
+			utils::hook::nop(0x60B03F, 9); utils::hook(0x60B03F, cull::cell_stub, HOOK_JUMP).install()->quick();
+
+			// ^ - never show all cells at once when the camera cell index is < 0, we handle that in the func above
+			utils::hook::nop(0x60B02E, 2);
+
+
+			// #
+			// tweakable culling via dvars
+
+			// disable mins culling - 0x643B08 nop 6
+			utils::hook(0x643B03, cull::disable_mins_culling_stub, HOOK_JUMP).install()->quick();
+
+			// disable maxs culling - 0x643B39 to jmp
+			utils::hook(0x643B34, cull::disable_maxs_culling_stub, HOOK_JUMP).install()->quick();
+
+			// disable (most) frustum culling - 0x643D44 to jmp
+			utils::hook::nop(0x643D3E, 6); utils::hook(0x643D3E, cull::disable_frustum_culling_stub, HOOK_JUMP).install()->quick();
+
+			// ^ for smodels - 0x643C79 to jmp
+			utils::hook::nop(0x643C73, 6); utils::hook(0x643C73, cull::disable_smodel_culling_stub, HOOK_JUMP).install()->quick();
+
+			dvars::rtx_culling_tweak_mins = game::Dvar_RegisterBool(
+				/* name		*/ "rtx_culling_tweak_mins",
+				/* desc		*/ "Disable dpvs mins check (reduces culling)",
+				/* default	*/ true,
+				/* flags	*/ game::dvar_flags::saved);
+
+			dvars::rtx_culling_tweak_maxs = game::Dvar_RegisterBool(
+				/* name		*/ "rtx_culling_tweak_maxs",
+				/* desc		*/ "Disable dpvs maxs check (reduces culling)",
+				/* default	*/ false,
+				/* flags	*/ game::dvar_flags::saved);
+
+			dvars::rtx_culling_tweak_frustum = game::Dvar_RegisterBool(
+				/* name		*/ "rtx_culling_tweak_frustum",
+				/* desc		*/ "Disable (most) frustum culling (reduces culling)",
+				/* default	*/ false,
+				/* flags	*/ game::dvar_flags::saved);
+
+			dvars::rtx_culling_tweak_smodel = game::Dvar_RegisterBool(
+				/* name		*/ "rtx_culling_tweak_smodel",
+				/* desc		*/ "Disable static model frustum culling (reduces culling)",
+				/* default	*/ true,
+				/* flags	*/ game::dvar_flags::saved);
+
+
+			// never cull brushmodels via dpvs
+			utils::hook::nop(0x64D35B, 2);
+			utils::hook::set<BYTE>(0x64D368, 0xEB); // ^
+
+			// ^ scene ents (spawned map markers (script models))
+			utils::hook::nop(0x64D17A, 2);
+			utils::hook::set<BYTE>(0x64D1A9, 0xEB); // ^
+		}
+
 
 		// *
 		// LOD

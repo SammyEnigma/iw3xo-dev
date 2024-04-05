@@ -8,8 +8,20 @@ namespace components
 		rtx();
 		const char* get_name() override { return "rtx"; }
 
+		static inline auto loc_culling_tweak_mins = 0u;
+		static inline auto loc_culling_tweak_maxs = 0u;
+		static inline auto loc_culling_tweak_frustum = 0u;
+		static inline auto loc_culling_tweak_smodel = 0u;
+
+		static constexpr auto FRUSTUM_PLANE_OFFSETS_COUNT = 7;
+		static inline float m_frustum_plane_offsets[FRUSTUM_PLANE_OFFSETS_COUNT] = { 5000.0f, 5000.0f, 5000.0f, 5000.0f, 5000.0f, 5000.0f, 5000.0f };
+
+		// old
+		static inline bool OLD_CULLING_ACTIVE = false;
 		static inline auto loc_disable_world_culling = 0u;
 		static inline auto loc_disable_entity_culling = 0u;
+
+
 
 		static inline std::vector rtx_disable_world_culling_enum = { "default", "less", "all", "all-but-models" };
 
