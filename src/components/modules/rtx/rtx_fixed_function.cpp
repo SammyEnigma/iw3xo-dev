@@ -50,7 +50,9 @@ namespace components
 	constexpr auto FX_VERTEX_FORMAT = (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1 | D3DFVF_TEX2);
 
 
-	// update 'state->prim.streams' and set d3d device stream source
+	/**
+	 * @brief update 'state->prim.streams' and set d3d device stream source
+	 */
 	void set_stream_source(game::GfxCmdBufState* state, IDirect3DVertexBuffer9* buffer, const std::uint32_t vertex_offset, const std::uint32_t stride)
 	{
 		if (state->prim.streams[0].vb != buffer || state->prim.streams[0].offset != vertex_offset || state->prim.streams[0].stride != stride)
@@ -62,62 +64,79 @@ namespace components
 		}
 	}
 
+	/**
+	 * @brief			unpacks a packed unit vector (eg. normal in GfxWorldVertex)
+	 * @param packed	PackedUnitVec
+	 * @param out		vec3 out
+	 */
+	void unpack_normal(const game::PackedUnitVec* packed, game::vec3_t out)
+	{
+		// normal unpacking in a cod4 hlsl shader:
+		// temp0	 = i.normal * float4(0.007874016, 0.007874016, 0.007874016, 0.003921569) + float4(-1, -1, -1, 0.7529412);
+		// temp0.xyz = temp0.www * temp0;
+
+		const auto scale = static_cast<float>(static_cast<std::uint8_t>(packed->array[3])) * (1.0f / 255.0f) + 0.7529412f;
+		out[0] = (static_cast<float>(static_cast<std::uint8_t>(packed->array[0])) * (1.0f / 127.0f) + -1.0f) * scale;
+		out[1] = (static_cast<float>(static_cast<std::uint8_t>(packed->array[1])) * (1.0f / 127.0f) + -1.0f) * scale;
+		out[2] = (static_cast<float>(static_cast<std::uint8_t>(packed->array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
+	}
+
+
 	// *
 	// static models (rigid)
 
+
+	/**
+	 * @brief		creates 
+	 * @param surf	XSurface to create vertex buffer for
+	 * @return		returns true if vertex buffer was allocated
+	 */
 	bool XSurfaceOptimize(game::XSurface* surf)
 	{
 		const auto dev = game::get_device();
 		bool allocated_any = false;
 
 		// setup vertexbuffer
+		if (!surf->custom_vertexbuffer) // XSurfaceOptimizeRigid
 		{
-			//XSurfaceOptimizeRigid(model, surf);
-			if (!surf->custom_vertexbuffer)
+			void* vertex_buffer_data = nullptr;
+			const auto vertex_bytes = surf->vertCount * MODEL_VERTEX_STRIDE;
+
+			if (auto hr = dev->CreateVertexBuffer(vertex_bytes, D3DUSAGE_WRITEONLY, MODEL_VERTEX_FORMAT, D3DPOOL_DEFAULT, &surf->custom_vertexbuffer, nullptr); hr >= 0)
 			{
-				void* vertex_buffer_data = nullptr;
-				const auto vertex_bytes = surf->vertCount * MODEL_VERTEX_STRIDE;
-
-				if (auto hr = dev->CreateVertexBuffer(vertex_bytes, 8, 0, D3DPOOL_DEFAULT, &surf->custom_vertexbuffer, nullptr);
-					hr >= 0)
+				if (hr = surf->custom_vertexbuffer->Lock(0, 0, &vertex_buffer_data, 0); hr >= 0)
 				{
-					if (hr = surf->custom_vertexbuffer->Lock(0, 0, &vertex_buffer_data, 0);
-						hr >= 0)
+					// we need to unpack normal and texcoords in 'GfxPackedVertex' to be able to use them for fixed-function rendering
+					for (auto i = 0; i < surf->vertCount; i++)
 					{
-						// we need to unpack normal and texcoords in 'GfxPackedVertex' to be able to use them for fixed-function rendering
-						for (auto i = 0; i < surf->vertCount; i++)
-						{
-							// packed source vertex
-							const auto src_vert = surf->verts0[i];
+						// packed source vertex
+						const auto src_vert = &surf->verts0[i];
 
-							// position of our unpacked vert within the vertex buffer
-							const auto v_pos_in_buffer = i * MODEL_VERTEX_STRIDE;
-							const auto v = reinterpret_cast<unpacked_model_vert*>(((DWORD)vertex_buffer_data + v_pos_in_buffer));
+						// position of our unpacked vert within the vertex buffer
+						const auto v_pos_in_buffer = i * MODEL_VERTEX_STRIDE;
+						const auto v = reinterpret_cast<unpacked_model_vert*>(((DWORD)vertex_buffer_data + v_pos_in_buffer));
 
-							// assign pos
-							v->pos[0] = src_vert.xyz[0];
-							v->pos[1] = src_vert.xyz[1];
-							v->pos[2] = src_vert.xyz[2];
+						// assign pos
+						v->pos[0] = src_vert->xyz[0];
+						v->pos[1] = src_vert->xyz[1];
+						v->pos[2] = src_vert->xyz[2];
 
-							// unpack normal and texcoords
-							const auto scale = static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[3])) * (1.0f / 255.0f) + 0.7529412f;
-							v->normal[0] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[0])) * (1.0f / 127.0f) + -1.0f) * scale;
-							v->normal[1] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[1])) * (1.0f / 127.0f) + -1.0f) * scale;
-							v->normal[2] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
+						// unpack and assign vert normal
+						unpack_normal(&src_vert->normal, v->normal);
 
-							game::Vec2UnpackTexCoords(src_vert.texCoord.packed, v->texcoord);
-						}
-
-						surf->custom_vertexbuffer->Unlock();
-					}
-					else
-					{
-						surf->custom_vertexbuffer->Release();
-						surf->custom_vertexbuffer = nullptr;
+						// uv
+						game::Vec2UnpackTexCoords(src_vert->texCoord.packed, v->texcoord);
 					}
 
-					allocated_any = true;
+					surf->custom_vertexbuffer->Unlock();
 				}
+				else
+				{
+					surf->custom_vertexbuffer->Release();
+					surf->custom_vertexbuffer = nullptr;
+				}
+
+				allocated_any = true;
 			}
 		}
 
@@ -153,36 +172,6 @@ namespace components
 
 
 	/**
-	 * @brief		builds a world matrix for the mesh
-	 * @param mtx	output matrix
-	 */
-	void rtx_fixed_function::build_worldmatrix_for_object(float(*mtx)[4], const float* quat, const float* origin, const float scale)
-	{
-		float model_axis[3][3] = {};
-		utils::vector::unit_quat_to_axis(quat, model_axis);
-
-		mtx[0][0] = model_axis[0][0] * scale;
-		mtx[0][1] = model_axis[0][1] * scale;
-		mtx[0][2] = model_axis[0][2] * scale;
-		mtx[0][3] = 0.0f;
-
-		mtx[1][0] = model_axis[1][0] * scale;
-		mtx[1][1] = model_axis[1][1] * scale;
-		mtx[1][2] = model_axis[1][2] * scale;
-		mtx[1][3] = 0.0f;
-
-		mtx[2][0] = model_axis[2][0] * scale;
-		mtx[2][1] = model_axis[2][1] * scale;
-		mtx[2][2] = model_axis[2][2] * scale;
-		mtx[2][3] = 0.0f;
-
-		mtx[3][0] = origin[0];
-		mtx[3][1] = origin[1];
-		mtx[3][2] = origin[2];
-		mtx[3][3] = 1.0f;
-	}
-
-	/**
 	* @brief		builds a world matrix for the mesh
 	* @param mtx	output matrix
 	*/
@@ -210,7 +199,19 @@ namespace components
 	}
 
 	/**
-	 * @brief completely rewritten R_DrawStaticModelDrawSurfNonOptimized to render static models using the fixed-function pipeline
+	 * @brief		builds a world matrix for the mesh
+	 * @param mtx	output matrix
+	 */
+	void rtx_fixed_function::build_worldmatrix_for_object(float(*mtx)[4], const float* quat, const float* origin, const float scale)
+	{
+		float model_axis[3][3] = {};
+		utils::vector::unit_quat_to_axis(quat, model_axis);
+		build_worldmatrix_for_object(mtx, model_axis, origin, scale);
+	}
+
+
+	/**
+	 * @brief	completely rewritten R_DrawStaticModelDrawSurfNonOptimized to render static models using the fixed-function pipeline
 	 */
 	void R_DrawStaticModelDrawSurfNonOptimized(const game::GfxStaticModelDrawStream* drawstream, game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
 	{
@@ -288,7 +289,10 @@ namespace components
 	// *
 	// xmodels (rigid/skinned)
 
-	void R_DrawXModelRigidModelSurf(game::GfxModelRigidSurface* model, [[maybe_unused]] game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
+	/**
+	 * @brief	draws rigid meshes using fixed function. Uses static vertex buffers
+	 */
+	void R_DrawXModelRigidModelSurf(const game::GfxModelRigidSurface* model, [[maybe_unused]] game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
 	{
 		const auto dev = game::get_device();
 		const auto surf = model->surf.xsurf;
@@ -397,57 +401,65 @@ namespace components
 
 	// ------------------------
 
+	/**
+	 * @brief	sets triangle indices within the dynamicIndexBuffer
+	 * @return	base index 
+	 */
 	int R_SetIndexData(game::GfxCmdBufPrimState* state, const std::uint16_t* indices, std::uint32_t tri_count)
 	{
+		const auto dyn_ib = game::gfx_buf->dynamicIndexBuffer;
 		const auto index_count = 3 * tri_count;
 
-		if (static_cast<int>(index_count) + game::gfx_buf->dynamicIndexBuffer->used > game::gfx_buf->dynamicIndexBuffer->total)
+		if (static_cast<int>(index_count) + dyn_ib->used > dyn_ib->total)
 		{
-			game::gfx_buf->dynamicIndexBuffer->used = 0;
+			dyn_ib->used = 0;
 		}
 
-		if (!game::gfx_buf->dynamicIndexBuffer->used)
+		if (!dyn_ib->used)
 		{
 			game::gfx_buf->dynamicIndexBuffer = game::gfx_buf->dynamicIndexBufferPool;
 		}
 
 		void* buffer_data;
-		if (const auto hr = game::gfx_buf->dynamicIndexBuffer->buffer->Lock(2 * game::gfx_buf->dynamicIndexBuffer->used, 6 * tri_count, &buffer_data, game::gfx_buf->dynamicIndexBuffer->used != 0 ? 0x1000 : 0x2000);
+		if (const auto hr = dyn_ib->buffer->Lock(2 * dyn_ib->used, 6 * tri_count, &buffer_data, dyn_ib->used != 0 ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
 			hr < 0)
 		{
-			//R_FatalLockError(hr);
 			game::Com_Error(game::ERR_DROP, "Fatal lock error :: R_SetIndexData");
 		}
 
 		memcpy(buffer_data, indices, 2 * index_count);
-		game::gfx_buf->dynamicIndexBuffer->buffer->Unlock();
+		dyn_ib->buffer->Unlock();
 
-		if (state->indexBuffer != game::gfx_buf->dynamicIndexBuffer->buffer)
+		if (state->indexBuffer != dyn_ib->buffer)
 		{
-			state->indexBuffer = game::gfx_buf->dynamicIndexBuffer->buffer;
-			state->device->SetIndices(game::gfx_buf->dynamicIndexBuffer->buffer);
+			state->indexBuffer = dyn_ib->buffer;
+			state->device->SetIndices(dyn_ib->buffer);
 		}
 
-		const auto base_index = game::gfx_buf->dynamicIndexBuffer->used;
-		game::gfx_buf->dynamicIndexBuffer->used += static_cast<int>(index_count);
+		const auto base_index = dyn_ib->used;
+		dyn_ib->used += static_cast<int>(index_count);
 
 		return base_index;
 	}
 
+	/**
+	 * @brief	draw skinned meshes using fixed function. Uses a dynamic vertex buffer.
+	 */
 	void R_DrawXModelSkinnedUncached(const game::GfxModelSkinnedSurface* skinned_surf, game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
 	{
 		const auto dev = game::get_device();
 		const auto surf = skinned_surf->xsurf;
+		const auto dyn_vb = game::gfx_buf->dynamicVertexBuffer;
 		const auto start_index = R_SetIndexData(&state->prim, surf->triIndices, surf->triCount);
 
-		if ((int)(MODEL_VERTEX_STRIDE * surf->vertCount + game::gfx_buf->dynamicVertexBuffer->used) > game::gfx_buf->dynamicVertexBuffer->total)
+		if ((int)(MODEL_VERTEX_STRIDE * surf->vertCount + dyn_vb->used) > dyn_vb->total)
 		{
-			game::gfx_buf->dynamicVertexBuffer->used = 0;
+			dyn_vb->used = 0;
 		}
 
 		// R_SetVertexData
 		void* buffer_data;
-		if (const auto hr = game::gfx_buf->dynamicVertexBuffer->buffer->Lock(game::gfx_buf->dynamicVertexBuffer->used, MODEL_VERTEX_STRIDE * surf->vertCount, &buffer_data, game::gfx_buf->dynamicVertexBuffer->used != 0 ? 0x1000 : 0x2000);
+		if (const auto hr = dyn_vb->buffer->Lock(dyn_vb->used, MODEL_VERTEX_STRIDE * surf->vertCount, &buffer_data, dyn_vb->used != 0 ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
 			hr < 0)
 		{
 			//R_FatalLockError(hr);
@@ -458,43 +470,35 @@ namespace components
 			for (auto i = 0u; i < surf->vertCount; i++)
 			{
 				// packed source vertex
-				const auto src_vert = skinned_surf->u.skinnedVert[i];
+				const auto src_vert = &skinned_surf->u.skinnedVert[i];
 
 				// position of our unpacked vert within the vertex buffer
 				const auto v_pos_in_buffer = i * MODEL_VERTEX_STRIDE;
 				const auto v = reinterpret_cast<unpacked_model_vert*>(((DWORD)buffer_data + v_pos_in_buffer));
 
 				// vert pos
-				v->pos[0] = src_vert.xyz[0];
-				v->pos[1] = src_vert.xyz[1];
-				v->pos[2] = src_vert.xyz[2];
+				v->pos[0] = src_vert->xyz[0];
+				v->pos[1] = src_vert->xyz[1];
+				v->pos[2] = src_vert->xyz[2];
 
 				// unpack and assign vert normal
-
-				// normal unpacking in a cod4 hlsl shader:
-				// temp0	 = i.normal * float4(0.007874016, 0.007874016, 0.007874016, 0.003921569) + float4(-1, -1, -1, 0.7529412);
-				// temp0.xyz = temp0.www * temp0;
-
-				const auto scale = static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[3])) * (1.0f / 255.0f) + 0.7529412f;
-				v->normal[0] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[0])) * (1.0f / 127.0f) + -1.0f) * scale;
-				v->normal[1] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[1])) * (1.0f / 127.0f) + -1.0f) * scale;
-				v->normal[2] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
+				unpack_normal(&src_vert->normal, v->normal);
 
 				// uv's
-				game::Vec2UnpackTexCoords(src_vert.texCoord.packed, v->texcoord);
+				game::Vec2UnpackTexCoords(src_vert->texCoord.packed, v->texcoord);
 			}
 
 		}
 
-		game::gfx_buf->dynamicVertexBuffer->buffer->Unlock();
-		const std::uint32_t vert_offset = game::gfx_buf->dynamicVertexBuffer->used;
-		game::gfx_buf->dynamicVertexBuffer->used += (MODEL_VERTEX_STRIDE * surf->vertCount);
+		dyn_vb->buffer->Unlock();
+		const std::uint32_t vert_offset = dyn_vb->used;
+		dyn_vb->used += (MODEL_VERTEX_STRIDE * surf->vertCount);
 
 
 		// #
 		// #
 
-		set_stream_source(state, game::gfx_buf->dynamicVertexBuffer->buffer, vert_offset, MODEL_VERTEX_STRIDE);
+		set_stream_source(state, dyn_vb->buffer, vert_offset, MODEL_VERTEX_STRIDE);
 
 		// needed or game renders mesh with shaders
 		dev->SetVertexShader(nullptr);
@@ -534,10 +538,14 @@ namespace components
 		}
 	}
 
+	/**
+	 * @brief Draw static - skinned meshes using fixed function. Uses static and dynamic vertex buffers.
+	 */
 	void R_DrawStaticModelsSkinnedDrawSurf(const game::GfxStaticModelDrawStream* draw_stream, game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
 	{
 		const auto dev = game::get_device();
 		const auto surf = draw_stream->localSurf;
+		const auto dyn_vb = game::gfx_buf->dynamicVertexBuffer;
 		const auto start_index = R_SetIndexData(&state->prim, surf->triIndices, surf->triCount);
 
 		if (!surf->deformed && surf->custom_vertexbuffer)
@@ -546,58 +554,49 @@ namespace components
 		}
 		else
 		{
-			if ((int)(MODEL_VERTEX_STRIDE * surf->vertCount + game::gfx_buf->dynamicVertexBuffer->used) > game::gfx_buf->dynamicVertexBuffer->total)
+			if ((int)(MODEL_VERTEX_STRIDE * surf->vertCount + dyn_vb->used) > dyn_vb->total)
 			{
-				game::gfx_buf->dynamicVertexBuffer->used = 0;
+				dyn_vb->used = 0;
 			}
 
 			// R_SetVertexData
 			void* buffer_data;
-			if (const auto hr = game::gfx_buf->dynamicVertexBuffer->buffer->Lock(game::gfx_buf->dynamicVertexBuffer->used, MODEL_VERTEX_STRIDE * surf->vertCount, &buffer_data, game::gfx_buf->dynamicVertexBuffer->used != 0 ? 0x1000 : 0x2000);
+			if (const auto hr = dyn_vb->buffer->Lock(dyn_vb->used, MODEL_VERTEX_STRIDE * surf->vertCount, &buffer_data, dyn_vb->used != 0 ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
 				hr < 0)
 			{
-				//R_FatalLockError(hr);
 				game::Com_Error(game::ERR_DROP, "Fatal lock error :: R_DrawXModelSkinnedUncached");
 			}
 			{
 				for (auto i = 0u; i < surf->vertCount; i++)
 				{
 					// packed source vertex
-					const auto src_vert = surf->verts0[i];
+					const auto src_vert = &surf->verts0[i];
 
 					// position of our unpacked vert within the vertex buffer
 					const auto v_pos_in_buffer = i * MODEL_VERTEX_STRIDE;
 					const auto v = reinterpret_cast<unpacked_model_vert*>(((DWORD)buffer_data + v_pos_in_buffer));
 
 					// vert pos
-					v->pos[0] = src_vert.xyz[0];
-					v->pos[1] = src_vert.xyz[1];
-					v->pos[2] = src_vert.xyz[2];
+					v->pos[0] = src_vert->xyz[0];
+					v->pos[1] = src_vert->xyz[1];
+					v->pos[2] = src_vert->xyz[2];
 
 					// unpack and assign vert normal
-
-					// normal unpacking in a cod4 hlsl shader:
-					// temp0	 = i.normal * float4(0.007874016, 0.007874016, 0.007874016, 0.003921569) + float4(-1, -1, -1, 0.7529412);
-					// temp0.xyz = temp0.www * temp0;
-
-					const auto scale = static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[3])) * (1.0f / 255.0f) + 0.7529412f;
-					v->normal[0] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[0])) * (1.0f / 127.0f) + -1.0f) * scale;
-					v->normal[1] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[1])) * (1.0f / 127.0f) + -1.0f) * scale;
-					v->normal[2] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
+					unpack_normal(&src_vert->normal, v->normal);
 
 					// uv's
-					game::Vec2UnpackTexCoords(src_vert.texCoord.packed, v->texcoord);
+					game::Vec2UnpackTexCoords(src_vert->texCoord.packed, v->texcoord);
 				}
 			}
 
-			game::gfx_buf->dynamicVertexBuffer->buffer->Unlock();
-			const std::uint32_t vert_offset = game::gfx_buf->dynamicVertexBuffer->used;
-			game::gfx_buf->dynamicVertexBuffer->used += (MODEL_VERTEX_STRIDE * surf->vertCount);
+			dyn_vb->buffer->Unlock();
+			const std::uint32_t vert_offset = dyn_vb->used;
+			dyn_vb->used += (MODEL_VERTEX_STRIDE * surf->vertCount);
 
 			// #
 			// #
 
-			set_stream_source(state, game::gfx_buf->dynamicVertexBuffer->buffer, vert_offset, MODEL_VERTEX_STRIDE);
+			set_stream_source(state, dyn_vb->buffer, vert_offset, MODEL_VERTEX_STRIDE);
 		}
 
 		// needed or game renders mesh with shaders
@@ -859,8 +858,7 @@ namespace components
 	}
 
 	/**
-	 * @brief completely rewritten R_TessBModel to render brushmodels using the fixed-function pipeline
-	 * - most challenging issue yet
+	 * @brief	completely rewritten R_TessBModel to render brushmodels using the fixed-function pipeline
 	 */
 	std::uint32_t R_TessBModel(const game::GfxDrawSurfListArgs* list_args, [[maybe_unused]] void* x, [[maybe_unused]] void* y)
 	{
@@ -1023,6 +1021,143 @@ namespace components
 		}
 	}
 
+	// *
+	// Tess techniques (2d, debug visualization etc.)
+
+#ifdef TESS_TESTS
+	namespace tess
+	{
+		int use_custom_tess_func()
+		{
+			if (const auto str = std::string_view(game::gfxCmdBufState->material->info.name);
+				str == "$line" || str == "$line_nodepth" || str == "iw3xo_showcollision_wire")
+			{
+				return 1;
+			}
+
+			return 0;
+		}
+
+		void custom_tess_func(const game::GfxDrawPrimArgs* args, [[maybe_unused]] game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
+		{
+			const auto dev = game::get_device();
+			const auto dyn_vb = game::gfx_buf->dynamicVertexBuffer;
+
+			const int DEBUG_VERT_STRIDE = 16;
+			const auto DEBUG_VERT_FORMAT = D3DFVF_XYZ | D3DFVF_DIFFUSE;
+
+			if (DEBUG_VERT_STRIDE * game::tess->vertexCount + dyn_vb->used > dyn_vb->total)
+			{
+				dyn_vb->used = 0;
+			}
+
+			// R_SetVertexData;
+			void* buffer_data;
+			if (const auto hr = dyn_vb->buffer->Lock(dyn_vb->used, DEBUG_VERT_STRIDE * game::tess->vertexCount, &buffer_data, dyn_vb->used != 0 ? D3DLOCK_NOOVERWRITE : D3DLOCK_DISCARD);
+				hr < 0)
+			{
+				game::Com_Error(game::ERR_DROP, "Fatal lock error :: R_DrawTessTechnique");
+			}
+
+			struct debug_vert
+			{
+				game::vec3_t pos;
+				DWORD color;
+			};
+
+			for (auto i = 0; i < game::tess->vertexCount; i++)
+			{
+				// packed source vertex
+				const auto src_vert = &game::tess->verts[i];
+
+				// position of our unpacked vert within the vertex buffer
+				const auto v_pos_in_buffer = i * DEBUG_VERT_STRIDE;
+				const auto v = reinterpret_cast<debug_vert*>(((DWORD)buffer_data + v_pos_in_buffer));
+
+				// vert pos
+				v->pos[0] = src_vert->xyzw[0];
+				v->pos[1] = src_vert->xyzw[1];
+				v->pos[2] = src_vert->xyzw[2];
+
+				v->color = src_vert->color.packed;
+			}
+
+
+			dyn_vb->buffer->Unlock();
+			const std::uint32_t vert_offset = dyn_vb->used;
+			dyn_vb->used += (DEBUG_VERT_STRIDE * game::tess->vertexCount);
+
+
+			// #
+			// #
+
+			set_stream_source(state, dyn_vb->buffer, vert_offset, DEBUG_VERT_STRIDE);
+
+			// needed or game renders mesh with shaders
+			dev->SetVertexShader(nullptr);
+			dev->SetPixelShader(nullptr);
+
+			DWORD og_cullmode, og_alphablend;
+			dev->GetRenderState(D3DRS_CULLMODE, &og_cullmode);
+			dev->GetRenderState(D3DRS_ALPHABLENDENABLE, &og_alphablend);
+
+			dev->SetRenderState(D3DRS_LIGHTING, FALSE);
+			dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+			dev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+
+			// set random texture not used for anything else (remix-wise)
+			const auto img = game::DB_FindXAssetHeader(game::ASSET_TYPE_IMAGE, "$identitynormalmap").image; // $identitynormalmap
+			dev->SetTexture(0, img->texture.basemap);
+
+			// vertex format
+			dev->SetFVF(DEBUG_VERT_FORMAT);
+
+			// world matrix
+			{
+				float mtx[4][4] = {};
+				mtx[0][0] = 1.0f;  mtx[0][1] = 0.0f; mtx[0][2] = 0.0f; mtx[0][3] = 0.0f;
+				mtx[1][0] = 0.0f;  mtx[1][1] = 1.0f; mtx[1][2] = 0.0f; mtx[1][3] = 0.0f;
+				mtx[2][0] = 0.0f;  mtx[2][1] = 0.0f; mtx[2][2] = 1.0f; mtx[2][3] = 0.0f;
+				mtx[3][0] = 0.0f;  mtx[3][1] = 0.0f; mtx[3][2] = 0.0f; mtx[3][3] = 1.0f;
+				dev->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
+			}
+
+			dev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, args->vertexCount, args->baseIndex, args->triCount);
+			dev->SetFVF(NULL);
+
+			dev->SetRenderState(D3DRS_CULLMODE, og_cullmode);
+			dev->SetRenderState(D3DRS_ALPHABLENDENABLE, og_alphablend);
+		}
+
+		__declspec(naked) void draw_tess_tech_stub()
+		{
+			const static uint32_t stock_func = 0x61A020; // R_DrawTessTechnique
+			const static uint32_t retn_addr = 0x61A374;
+			__asm
+			{
+				pushad;
+				call	use_custom_tess_func;
+				cmp		eax, 1;
+				jne		OG_LOGIC;
+				popad;
+				call	custom_tess_func;
+				jmp		retn_addr;
+
+			OG_LOGIC:
+				popad;
+				call	stock_func;
+				jmp		retn_addr;
+			}
+		}
+	}
+#endif
+
+	// *
+	// build / copy / unpack vertex buffers
+
+	/**
+	 * @brief  copies / unpacks effects vertex buffer (codeMesh) before the frame gets rendered by the "backend"
+	 */
 	void rtx_fixed_function::copy_fx_buffer()
 	{
 		const auto dev = game::get_device();
@@ -1106,9 +1241,9 @@ namespace components
 	}
 
 
-	// *
-	// build buffers
-
+	/**
+	 * @brief	builds static vertex buffer for world geometry (BSP)
+	 */
 	void build_gfxworld_buffers()
 	{
 		const auto dev = game::get_device();
@@ -1131,49 +1266,29 @@ namespace components
 				if (hr = gfx_world_vertexbuffer->Lock(0, 0, &vertex_buffer_data, 0);
 					hr >= 0)
 				{
-					/*	struct GfxWorldVertex = 44 bytes
-					{
-						float xyz[3];
-						float binormalSign;
-						GfxColor color;
-						float texCoord[2];
-						float lmapCoord[2];
-						PackedUnitVec normal;
-						PackedUnitVec tangent;
-					};*/
-
-					// unpack normal so we can use fixed-function rendering with normals
 					for (auto i = 0u; i < game::gfx_world->vertexCount; i++)
 					{
 						// packed source vertex
-						const auto src_vert = game::gfx_world->vd.vertices[i];
+						const auto src_vert = &game::gfx_world->vd.vertices[i];
 
 						// position of our unpacked vert within the vertex buffer
 						const auto v_pos_in_buffer = i * WORLD_VERTEX_STRIDE; // pos-xyz ; normal-xyz ; texcoords uv = 32 byte 
 						const auto v = reinterpret_cast<unpacked_world_vert*>(((DWORD)vertex_buffer_data + v_pos_in_buffer));
 
 						// vert pos
-						v->pos[0] = src_vert.xyz[0];
-						v->pos[1] = src_vert.xyz[1];
-						v->pos[2] = src_vert.xyz[2];
+						v->pos[0] = src_vert->xyz[0];
+						v->pos[1] = src_vert->xyz[1];
+						v->pos[2] = src_vert->xyz[2];
 
 						// unpack and assign vert normal
-
-						// normal unpacking in a cod4 hlsl shader:
-						// temp0	 = i.normal * float4(0.007874016, 0.007874016, 0.007874016, 0.003921569) + float4(-1, -1, -1, 0.7529412);
-						// temp0.xyz = temp0.www * temp0;
-
-						const auto scale =  static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[3])) * (1.0f/255.0f) + 0.7529412f;
-						v->normal[0] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[0])) * (1.0f / 127.0f) + -1.0f) * scale;
-						v->normal[1] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[1])) * (1.0f / 127.0f) + -1.0f) * scale;
-						v->normal[2] = (static_cast<float>(static_cast<std::uint8_t>(src_vert.normal.array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
+						unpack_normal(&src_vert->normal, v->normal);
 
 						// packed vertex color : used for alpha blending of decals
-						v->color = src_vert.color.packed;
+						v->color = src_vert->color.packed;
 
 						// uv's
-						v->texcoord[0] = src_vert.texCoord[0];
-						v->texcoord[1] = src_vert.texCoord[1];
+						v->texcoord[0] = src_vert->texCoord[0];
+						v->texcoord[1] = src_vert->texCoord[1];
 					}
 
 					gfx_world_vertexbuffer->Unlock();
@@ -1228,18 +1343,21 @@ namespace components
 
 	void free_fixed_function_buffers()
 	{
-		// #
 		// cleanup world buffer
-
 		if (gfx_world_vertexbuffer)
 		{
 			gfx_world_vertexbuffer->Release();
 			gfx_world_vertexbuffer = nullptr;
 		}
 
-		// #
-		// cleanup model buffer
+		// cleanup effects buffer
+		if (rtx_fixed_function::dynamic_codemesh_vb)
+		{
+			rtx_fixed_function::dynamic_codemesh_vb->Release();
+			rtx_fixed_function::dynamic_codemesh_vb = nullptr;
+		}
 
+		// cleanup model buffers
 		game::DB_EnumXAssets_FastFile(game::XAssetType::ASSET_TYPE_XMODEL, [](game::XAssetHeader header, [[maybe_unused]] void* data)
 		{
 			const auto dev = game::get_device();
@@ -1283,220 +1401,68 @@ namespace components
 		}
 	}
 
-
-	// *
-	// Tess techniques (2d, debug visualization etc.)
-
-#ifdef TESS_TESTS
-	namespace tess
-	{
-		int use_custom_tess_func()
-		{
-			if (const auto str = std::string_view(game::gfxCmdBufState->material->info.name);
-				str == "$line" || str == "$line_nodepth" || str == "iw3xo_showcollision_wire")
-			{
-				return 1;
-			}
-
-			return 0;
-		}
-
-		void custom_tess_func(game::GfxDrawPrimArgs* args, [[maybe_unused]] game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state)
-		{
-			const int DEBUG_VERT_STRIDE = 16;
-			const auto DEBUG_VERT_FORMAT = D3DFVF_XYZ | D3DFVF_DIFFUSE;
-
-			if ((int)(DEBUG_VERT_STRIDE * game::tess->vertexCount + game::gfx_buf->dynamicVertexBuffer->used) > game::gfx_buf->dynamicVertexBuffer->total)
-			{
-				game::gfx_buf->dynamicVertexBuffer->used = 0;
-			}
-
-			// R_SetVertexData;
-			void* buffer_data;
-			if (const auto hr = game::gfx_buf->dynamicVertexBuffer->buffer->Lock(game::gfx_buf->dynamicVertexBuffer->used, DEBUG_VERT_STRIDE * game::tess->vertexCount, &buffer_data, game::gfx_buf->dynamicVertexBuffer->used != 0 ? 0x1000 : 0x2000);
-				hr < 0)
-			{
-				game::Com_Error(game::ERR_DROP, "Fatal lock error :: R_DrawTessTechnique");
-			}
-
-			{
-				struct debug_vert
-				{
-					game::vec3_t pos;
-					DWORD color;
-				};
-
-				for (auto i = 0; i < game::tess->vertexCount; i++)
-				{
-					// packed source vertex
-					const auto src_vert = game::tess->verts[i];
-
-					// position of our unpacked vert within the vertex buffer
-					const auto v_pos_in_buffer = i * DEBUG_VERT_STRIDE;
-					const auto v = reinterpret_cast<debug_vert*>(((DWORD)buffer_data + v_pos_in_buffer));
-
-					// vert pos
-					v->pos[0] = src_vert.xyzw[0];
-					v->pos[1] = src_vert.xyzw[1];
-					v->pos[2] = src_vert.xyzw[2];
-
-					v->color = src_vert.color.packed;
-				}
-			}
-
-			game::gfx_buf->dynamicVertexBuffer->buffer->Unlock();
-			const std::uint32_t vert_offset = game::gfx_buf->dynamicVertexBuffer->used;
-			game::gfx_buf->dynamicVertexBuffer->used += (DEBUG_VERT_STRIDE * game::tess->vertexCount);
-
-
-			// #
-			// #
-
-			if (state->prim.streams[0].vb != game::gfx_buf->dynamicVertexBuffer->buffer || state->prim.streams[0].offset != vert_offset || state->prim.streams[0].stride != DEBUG_VERT_STRIDE)
-			{
-				state->prim.streams[0].vb = game::gfx_buf->dynamicVertexBuffer->buffer;
-				state->prim.streams[0].offset = vert_offset;
-				state->prim.streams[0].stride = DEBUG_VERT_STRIDE;
-				state->prim.device->SetStreamSource(0, game::gfx_buf->dynamicVertexBuffer->buffer, vert_offset, DEBUG_VERT_STRIDE);
-			}
-
-			IDirect3DVertexShader9* og_vertex_shader;
-			IDirect3DPixelShader9* og_pixel_shader;
-
-			// save shaders
-			state->prim.device->GetVertexShader(&og_vertex_shader);
-			state->prim.device->GetPixelShader(&og_pixel_shader);
-
-			// needed or game renders mesh with shaders
-			state->prim.device->SetVertexShader(nullptr);
-			state->prim.device->SetPixelShader(nullptr);
-
-			state->prim.device->SetRenderState(D3DRS_LIGHTING, FALSE);
-			state->prim.device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-			//state->prim.device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-			state->prim.device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-
-			// set random texture not used for anything else (remix-wise)
-			const auto img = game::DB_FindXAssetHeader(game::ASSET_TYPE_IMAGE, "$identitynormalmap").image; // $identitynormalmap
-			state->prim.device->SetTexture(0, img->texture.basemap);
-
-			// vertex format
-			state->prim.device->SetFVF(DEBUG_VERT_FORMAT);
-
-			// world matrix
-			{
-				float mtx[4][4] = {};
-				mtx[0][0] = 1.0f;  mtx[0][1] = 0.0f; mtx[0][2] = 0.0f; mtx[0][3] = 0.0f;
-				mtx[1][0] = 0.0f;  mtx[1][1] = 1.0f; mtx[1][2] = 0.0f; mtx[1][3] = 0.0f;
-				mtx[2][0] = 0.0f;  mtx[2][1] = 0.0f; mtx[2][2] = 1.0f; mtx[2][3] = 0.0f;
-				mtx[3][0] = 0.0f;  mtx[3][1] = 0.0f; mtx[3][2] = 0.0f; mtx[3][3] = 1.0f;
-
-				mtx[3][0] = mtx[3][0]; // - source->eyeOffset[0];
-				mtx[3][1] = mtx[3][1]; // - source->eyeOffset[1];
-				mtx[3][2] = mtx[3][2]; // - source->eyeOffset[2];
-
-				state->prim.device->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
-			}
-
-			state->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, args->vertexCount, args->baseIndex, args->triCount);
-
-			state->prim.device->SetFVF(NULL);
-			state->prim.device->SetVertexShader(og_vertex_shader);
-			state->prim.device->SetPixelShader(og_pixel_shader);
-
-			state->prim.device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-		}
-
-		__declspec(naked) void draw_tess_tech_stub()
-		{
-			const static uint32_t stock_func = 0x61A020; // R_DrawTessTechnique
-			const static uint32_t retn_addr = 0x61A374;
-			__asm
-			{
-				pushad;
-				call	use_custom_tess_func;
-				cmp		eax, 1;
-				jne		OG_LOGIC;
-				popad;
-				call	custom_tess_func;
-				jmp		retn_addr;
-
-			OG_LOGIC:
-				popad;
-				call	stock_func;
-				jmp		retn_addr;
-			}
-		}
-	}
-#endif
 	// *
 	// *
-
 
 	rtx_fixed_function::rtx_fixed_function()
 	{
-		// fixed function rendering of static models and world geometry
-		//if (flags::has_flag("fixed_function"))
-		{
-			// fixed-function rendering of static models (R_TessStaticModelRigidDrawSurfList)
-			utils::hook(0x655A10, R_DrawStaticModelDrawSurfNonOptimized, HOOK_CALL).install()->quick();
+		// fixed-function rendering of static models (R_TessStaticModelRigidDrawSurfList)
+		utils::hook(0x655A10, R_DrawStaticModelDrawSurfNonOptimized, HOOK_CALL).install()->quick();
 
-			// fixed-function rendering of rigid xmodels - call 1 (RB_TessXModelRigidDrawSurfList-> R_DrawXModelSurfCamera-> R_DrawXModelRigidModelSurf1
-			utils::hook(0x65722C, R_DrawXModelRigidModelSurf1_stub, HOOK_JUMP).install()->quick();
+		// fixed-function rendering of rigid xmodels (RB_TessXModelRigidDrawSurfList-> R_DrawXModelSurfCamera-> R_DrawXModelRigidModelSurf1)
+		utils::hook(0x65722C, R_DrawXModelRigidModelSurf1_stub, HOOK_JUMP).install()->quick();
+		utils::hook(0x6575C5, R_DrawXModelRigidModelSurf2_stub, HOOK_JUMP).install()->quick();
 
-			// ^ call 2
-			utils::hook(0x6575C5, R_DrawXModelRigidModelSurf2_stub, HOOK_JUMP).install()->quick();
+		// fixed-function rendering of skinned (animated) models (R_TessXModelSkinnedDrawSurfList)
+		utils::hook::nop(0x646ECE, 3); // nop eax overwrite before calling our stub (we need the ptr in eax)
+		utils::hook(0x646ED4, R_DrawXModelSkinnedUncached_stub, HOOK_JUMP).install()->quick();
 
-			// fixed-function rendering of skinned (animated) models (R_TessXModelSkinnedDrawSurfList)
-			utils::hook::nop(0x646ECE, 3); // nop eax overwrite before calling our stub (we need the ptr in eax)
-			utils::hook(0x646ED4, R_DrawXModelSkinnedUncached_stub, HOOK_JUMP).install()->quick();
+		// fixed-function rendering of static skinned models
+		utils::hook(0x65618E, R_DrawStaticModelsSkinnedDrawSurf, HOOK_CALL).install()->quick();
 
-			// fixed-function rendering of static skinned models
-			utils::hook(0x65618E, R_DrawStaticModelsSkinnedDrawSurf, HOOK_CALL).install()->quick();
+		// fixed-function rendering of world surfaces (R_TessTrianglesPreTessList)
+		utils::hook(0x6486F4, R_DrawBspDrawSurfsPreTess, HOOK_CALL).install()->quick();
 
-			// fixed-function rendering of world surfaces (R_TessTrianglesPreTessList)
-			utils::hook(0x6486F4, R_DrawBspDrawSurfsPreTess, HOOK_CALL).install()->quick();
+		// ^ without batching
+		utils::hook(0x648563, R_DrawBspDrawSurfs, HOOK_CALL).install()->quick();
 
-			// ^ without batching
-			utils::hook(0x648563, R_DrawBspDrawSurfs, HOOK_CALL).install()->quick();
-
-			// fixed-function rendering of brushmodels
-			utils::hook(0x648710, R_TessBModel, HOOK_JUMP).install()->quick();
+		// fixed-function rendering of brushmodels
+		utils::hook(0x648710, R_TessBModel, HOOK_JUMP).install()->quick();
 
 #ifdef TESS_TESTS
-			// fixed-function rendering of debug visualizations / 2d etc .. RB_EndTessSurface-> R_DrawTessTechnique
-			// - currently only working "good" on debug collision polygons (lines-only are messed up - here to stay as reference)
-			utils::hook(0x61A36F, tess::draw_tess_tech_stub, HOOK_JUMP).install()->quick();
+		// fixed-function rendering of debug visualizations / 2d etc .. RB_EndTessSurface-> R_DrawTessTechnique
+		// - currently only working "good" on debug collision polygons (lines-only are messed up)
+		utils::hook(0x61A36F, tess::draw_tess_tech_stub, HOOK_JUMP).install()->quick();
 #endif
-			// ----
+		// ----
 
-			// on map load :: build custom buffers for fixed-function rendering
-			utils::hook(0x44031B, init_fixed_function_buffers_stub, HOOK_JUMP).install()->quick(); // CG_Init :: CG_NorthDirectionChanged call
+		// on map load :: build custom buffers for fixed-function rendering
+		utils::hook(0x44031B, init_fixed_function_buffers_stub, HOOK_JUMP).install()->quick(); // CG_Init :: CG_NorthDirectionChanged call
 
-			// on renderer shutdown :: release custom buffers used by fixed-function rendering
-			utils::hook(0x5F5052, free_fixed_function_buffers_stub, HOOK_JUMP).install()->quick(); // R_Shutdown :: R_ResetModelLighting call
+		// on renderer shutdown :: release custom buffers used by fixed-function rendering
+		utils::hook(0x5F5052, free_fixed_function_buffers_stub, HOOK_JUMP).install()->quick(); // R_Shutdown :: R_ResetModelLighting call
 
-			dvars::rtx_warm_smodels = game::Dvar_RegisterBool(
-				/* name		*/ "rtx_warm_smodels",
-				/* desc		*/ "Build static model vertex buffers on map load (fixed-function rendering only)",
-				/* default	*/ true,
-				/* flags	*/ game::dvar_flags::saved);
+		dvars::rtx_warm_smodels = game::Dvar_RegisterBool(
+			/* name		*/ "rtx_warm_smodels",
+			/* desc		*/ "Build static model vertex buffers on map load (fixed-function rendering only)",
+			/* default	*/ true,
+			/* flags	*/ game::dvar_flags::saved);
 
 #if DEBUG
-			command::add("rtx_rebuild_world", "", "rebuilds the gfxworld vertex buffer (fixed-function)", [this](command::params)
-			{
-				gfx_world_vertexbuffer->Release();
-				gfx_world_vertexbuffer = nullptr;
-				build_gfxworld_buffers();
-			});
+		command::add("rtx_rebuild_world", "", "rebuilds the gfxworld vertex buffer (fixed-function)", [this](command::params)
+		{
+			gfx_world_vertexbuffer->Release();
+			gfx_world_vertexbuffer = nullptr;
+			build_gfxworld_buffers();
+		});
 
-			command::add("rtx_rebuild_all", "", "free all custom buffers and rebuilds them when needed + rebuilds the gfxworld vertex buffer", [this](command::params)
-			{
-				free_fixed_function_buffers();
-				build_gfxworld_buffers();
-			});
+		command::add("rtx_rebuild_all", "", "free all custom buffers and rebuilds them when needed + rebuilds the gfxworld vertex buffer", [this](command::params)
+		{
+			free_fixed_function_buffers();
+			build_gfxworld_buffers();
+		});
 #endif
-		}
+		
 
 		// fixed-function rendering of effects - R_TessCodeMeshList (particle clounds are still shader based)
 		if (!flags::has_flag("stock_effects"))
