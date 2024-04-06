@@ -165,7 +165,6 @@ namespace dvars
 	game::dvar_s* r_showTessDist = nullptr;
 	game::dvar_s* r_showCellIndex = nullptr;
 
-
 	game::dvar_s* r_fogTweaks = nullptr;
 	game::dvar_s* r_fogTweaksColor = nullptr;
 	game::dvar_s* r_fogTweaksStart = nullptr;

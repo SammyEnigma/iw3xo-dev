@@ -967,10 +967,10 @@ namespace components
 		}
 
 		// draw portal cells if r_showCellIndex is true
-		if (dvars::r_showCellIndex)
+		/*if (dvars::r_showCellIndex)
 		{
 			dvars::int_override("r_showPortals", dvars::r_showCellIndex->current.enabled);
-		}
+		}*/
 
 		// #
 		// #
@@ -1387,6 +1387,7 @@ namespace components
 			/* desc		*/ "draw cell index at the center of current cell (useful for map_settings)",
 			/* default	*/ false,
 			/* flags	*/ game::dvar_flags::none);
+
 
 #if DEBUG
 		command::add("dump_modes", "", "", [this](command::params)

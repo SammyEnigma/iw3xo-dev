@@ -39,11 +39,16 @@ namespace components
 
 	void rtx_gui::gui()
 	{
-		ImGui::Indent(8.0f);
-
 		if (ImGui::CollapsingHeader("General Settings", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
+
+			if (ImGui::Button("Reload Mapsettings.ini", ImVec2(ImGui::GetContentRegionAvail().x - 8.0f, 0)))
+			{
+				rtx_map_settings::get()->set_settings_for_loaded_map(true);
+			}
+
+			SPACING(0.0f, 4.0f);
 
 			const auto& fx_enable = game::Dvar_FindVar("fx_enable");
 			ImGui::Checkbox("Enable FX", &fx_enable->current.enabled);
@@ -65,10 +70,21 @@ namespace components
 			TT("The game has a hard limit on how many static models it can draw at once (warning print in console).\n"
 			   "Enabling this setting will disable that limit but might cause instability.");
 
-			SPACING(0.0f, 4.0f);
-			if (ImGui::Button("Reload Mapsettings.ini", ImVec2(ImGui::GetContentRegionAvail().x - 8.0f, 0)))
-			{
-				rtx_map_settings::get()->set_settings_for_loaded_map(true);
+			// -------------------
+			title_inside_seperator("Material Info", true, 0.0f, true, 2.0f);
+
+			if (dvars::r_showTess) {
+				ImGui::PushItemWidth(240.0f);
+				const char* TESS_TYPES[] = { "OFF", "Model Tech", "Model Material", "BSP Tech", "BSP Material", "BModel Tech", "BModel Material" };
+				ImGui::SliderInt("##material_info", &dvars::r_showTess->current.integer, 0, 6, TESS_TYPES[dvars::r_showTess->current.integer]);
+				ImGui::PopItemWidth();
+			}
+
+			if (dvars::r_showTessDist) {
+				ImGui::SameLine(280, 0);
+				ImGui::PushItemWidth(140.0f);
+				ImGui::SliderFloat("Distance", &dvars::r_showTessDist->current.value, 1.0f, 1000.0f, "%.0f"); TT(dvars::r_showTessDist->description);
+				ImGui::PopItemWidth();
 			}
 
 			// ------------------
@@ -76,31 +92,37 @@ namespace components
 
 			if (rtx::OLD_CULLING_ACTIVE)
 			{
-				if (dvars::rtx_disable_entity_culling)
+				if (dvars::rtx_disable_entity_culling) {
 					ImGui::Checkbox("Disable Entity Culling", &dvars::rtx_disable_entity_culling->current.enabled);TT(dvars::rtx_disable_entity_culling->description);
+				}
 
-				if (dvars::rtx_disable_world_culling)
+				if (dvars::rtx_disable_world_culling) {
 					ImGui::SliderInt("World Culling", &dvars::rtx_disable_world_culling->current.integer, 0, 3,
 						rtx::rtx_disable_world_culling_enum[dvars::rtx_disable_world_culling->current.integer]); TT(dvars::rtx_disable_world_culling->description);
+				}
 			}
 			else
 			{
-				if (dvars::rtx_culling_tweak_mins)
+				if (dvars::rtx_culling_tweak_mins) {
 					ImGui::Checkbox("Tweak Culling (Mins)", &dvars::rtx_culling_tweak_mins->current.enabled); TT(dvars::rtx_culling_tweak_mins->description);
+				}
 
 				ImGui::SameLine(280, 0);
-				if (dvars::rtx_culling_tweak_maxs)
+				if (dvars::rtx_culling_tweak_maxs) {
 					ImGui::Checkbox("Tweak Culling (Maxs)", &dvars::rtx_culling_tweak_maxs->current.enabled); TT(dvars::rtx_culling_tweak_maxs->description);
+				}
 
-				if (dvars::rtx_culling_tweak_frustum)
+				if (dvars::rtx_culling_tweak_frustum) {
 					ImGui::Checkbox("Tweak Culling (Frustum)", &dvars::rtx_culling_tweak_frustum->current.enabled); TT(dvars::rtx_culling_tweak_frustum->description);
+				}
 
 				ImGui::SameLine(280, 0);
-				if (dvars::rtx_culling_tweak_smodel)
+				if (dvars::rtx_culling_tweak_smodel) {
 					ImGui::Checkbox("Tweak Culling (Static Models)", &dvars::rtx_culling_tweak_smodel->current.enabled); TT(dvars::rtx_culling_tweak_smodel->description);
+				}
 
 				SPACING(0.0f, 4.0f);
-				if (ImGui::CollapsingHeader("Frustumplanes"))
+				if (ImGui::CollapsingHeader("Frustumplanes (Default = 0)"))
 				{
 					for (auto i = 0u; i < rtx::FRUSTUM_PLANE_OFFSETS_COUNT; i++)
 					{
@@ -113,8 +135,14 @@ namespace components
 			// ------------------
 			title_inside_seperator("Dev Settings", true, 0.0f, true, 2.0f);
 
-			if (dvars::r_showCellIndex)
-				ImGui::Checkbox("Show Cell Indices (Portal)", &dvars::r_showCellIndex->current.enabled); TT(dvars::r_showCellIndex->description);
+			if (dvars::r_showCellIndex) {
+				ImGui::Checkbox("Show Cell Indices", &dvars::r_showCellIndex->current.enabled); TT(dvars::r_showCellIndex->description);
+			}
+
+			if (const auto var = game::Dvar_FindVar("r_showPortals"); var) {
+				ImGui::SameLine(280, 0);
+				ImGui::Checkbox("Show Cell Bounds", &var->current.enabled); TT(var->description);
+			}
 
 #if DEBUG
 			ImGui::DragInt("D3D Alpha Blend Setting", &rtx_gui::d3d_alpha_blend, 0.025f, 0, 16);
@@ -496,9 +524,9 @@ namespace components
 			const auto& r_lodBiasRigid = game::Dvar_FindVar("r_lodBiasRigid");
 			const auto& r_lodScaleSkinned = game::Dvar_FindVar("r_lodScaleSkinned");
 			const auto& r_lodBiasSkinned = game::Dvar_FindVar("r_lodBiasSkinned");
-			ImGui::DragFloat("r_lodScaleRigid", &r_lodScaleRigid->current.value, 0.1f, 0.0f);
-			ImGui::DragFloat("r_lodBiasRigid", &r_lodBiasRigid->current.value, 0.1f, 0.0f);
-			ImGui::DragFloat("r_lodScaleSkinned", &r_lodScaleSkinned->current.value, 0.1f);
+			ImGui::SliderFloat("r_lodScaleRigid", &r_lodScaleRigid->current.value, 0.0f, 8.0f);
+			ImGui::DragFloat("r_lodBiasRigid", &r_lodBiasRigid->current.value, 0.1f);
+			ImGui::SliderFloat("r_lodScaleSkinned", &r_lodScaleSkinned->current.value, 0.0f, 8.0f);
 			ImGui::DragFloat("r_lodBiasSkinned", &r_lodBiasSkinned->current.value, 0.1f);
 
 			//

@@ -66,6 +66,8 @@ namespace components
 			}
 		}
 
+		ImGui::SetNextWindowSizeConstraints(ImVec2(580.0f, 400.0f), ImVec2(580.0f, FLT_MAX));
+
 		// early out if the window is collapsed, as an optimization.
 		if (!ImGui::Begin("Devgui", &menu.menustate, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse))
 		{
