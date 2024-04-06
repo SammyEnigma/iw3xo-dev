@@ -48,12 +48,40 @@ namespace components
 
 		if (!flags::has_flag("no_fog"))
 		{
+			const auto s = rtx_map_settings::settings();
 			const float fog_start = 1.0f;
+
 			dev->SetRenderState(D3DRS_FOGENABLE, TRUE);
-			dev->SetRenderState(D3DRS_FOGCOLOR, rtx_map_settings::m_color.packed);
+			dev->SetRenderState(D3DRS_FOGCOLOR, s->fog_color.packed);
 			dev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR);
 			dev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&fog_start));
-			dev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&rtx_map_settings::m_max_distance));
+			dev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&s->fog_distance));
+		}
+
+		if (!flags::has_flag("no_sun"))
+		{
+			// only set sun if debuglight 0 is not active
+			if (const auto l0 = &rtx_lights::rtx_debug_lights[0]; !l0->enable)
+			{
+				const auto s = rtx_map_settings::settings();
+
+				D3DLIGHT9 light = {};
+				light.Type = D3DLIGHT_DIRECTIONAL;
+				light.Diffuse.r = s->sun_color[0] * s->sun_intensity;
+				light.Diffuse.g = s->sun_color[1] * s->sun_intensity;
+				light.Diffuse.b = s->sun_color[2] * s->sun_intensity;
+
+				D3DXVec3Normalize((D3DXVECTOR3*)&light.Direction, (const D3DXVECTOR3*)&s->sun_direction);
+
+				dev->SetLight(0, &light);
+				dev->LightEnable(0, TRUE);
+
+				// update gui settings for debug light 0
+				l0->color_scale = s->sun_intensity;
+				l0->color[0] =	s->sun_color[0];		l0->color[1] = s->sun_color[1];		l0->color[2] = s->sun_color[2];
+				l0->dir[0] =	s->sun_direction[0];	l0->dir[1] = s->sun_direction[1];	l0->dir[2] = s->sun_direction[2];
+				l0->type = D3DLIGHT_DIRECTIONAL;
+			}
 		}
 	}
 
@@ -637,7 +665,7 @@ namespace components
 				// #
 				// force cells defined in map_settings.ini
 
-				/*const auto& cell_settings = map_settings::settings()->cell_settings;
+				const auto& cell_settings = rtx_map_settings::settings()->cell_settings;
 				if (!cell_settings.empty())
 				{
 					for (const auto& c : cell_settings)
@@ -646,19 +674,18 @@ namespace components
 						{
 							for (const auto& i : c.forced_cell_indices)
 							{
-								const auto forced_cell = &game::sp::rgp->world->cells[i];
-								const auto c_index = forced_cell - game::sp::rgp->world->cells;
-								game::sp::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(forced_cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
-								dpvsGlob->cellVisibleBits[(c_index >> 5) + 3] |= (1 << (c_index & 0x1F)) & ~((1 << (c_index & 0x1F)) & dpvsGlob->cellForceInvisibleBits[(c_index >> 5) + 3]);
+								const auto forced_cell = &game::rgp->world->cells[i];
+								const auto c_index = forced_cell - game::rgp->world->cells;
+								game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(forced_cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
+								dpvsGlob->cellVisibleBits[(c_index >> 5) + 3] |= (1 << (c_index & 0x1F));
 							}
 
 							break;
 						}
 					}
-				}*/
+				}
 
 				// R_VisitPortals
-				//utils::hook::call<void(__cdecl)(game::GfxCell*, game::DpvsPlane*, game::DpvsPlane*, int)>(0x6B3DA0)(cell, &dpvsGlob->nearPlane, dpvs->frustumPlanes, dpvs->frustumPlaneCount);
 				game::R_VisitPortals(dpvs->frustumPlaneCount, cell, &dpvsGlob->viewPlane, dpvs->frustumPlanes); // viewplane here .. or is that the nearplane?
 			}
 		}

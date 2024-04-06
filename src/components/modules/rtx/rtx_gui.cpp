@@ -133,25 +133,25 @@ namespace components
 			static float skygroup01_width = 0.0f;
 			gui::center_horz_begin(skygroup01_width);
 			{
-				if (ImGui::Button("Hill", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Hill [0]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::CLEAR);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Desert", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Desert [1]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::DESERT);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Night", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Night [3]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::NIGHT);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Night 2", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Night 2 [7]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::NIGHT2);
 				}
@@ -162,25 +162,25 @@ namespace components
 			static float skygroup02_width = 0.0f;
 			gui::center_horz_begin(skygroup02_width);
 			{
-				if (ImGui::Button("Overcast", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Overcast [4]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::OVERCAST);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Sunset", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Sunset [5]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::SUNSET);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Galaxy 1", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Galaxy 1 [2]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::GALAXY1);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Galaxy 2", ImVec2(BUTTON_WIDTH, 0)))
+				if (ImGui::Button("Galaxy 2 [6]", ImVec2(BUTTON_WIDTH, 0)))
 				{
 					skysphere_spawn(SKY::GALAXY2);
 				}
@@ -303,7 +303,7 @@ namespace components
 			{
 				ImGui::PushID(i);
 
-				if (ImGui::CollapsingHeader(utils::va("Light %d", i), !i ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None))
+				if (ImGui::CollapsingHeader(!i ? "Light 0 - usually used as sun" : utils::va("Light %d", i), !i ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None))
 				{
 					bool on_edit = false;
 
@@ -414,7 +414,7 @@ namespace components
 
 						if (rtx_lights::rtx_debug_lights[i].type > D3DLIGHT_POINT)
 						{
-							on_edit = ImGui::DragFloat3("Direction", rtx_lights::rtx_debug_lights[i].dir, 0.05f) ? true : on_edit;
+							on_edit = ImGui::DragFloat3("Direction", rtx_lights::rtx_debug_lights[i].dir, 0.001f) ? true : on_edit;
 
 							if (rtx_lights::rtx_debug_lights[i].attach_to_head)
 							{
@@ -426,15 +426,15 @@ namespace components
 						{
 							if (rtx_lights::rtx_debug_lights[i].type == D3DLIGHT_SPOT)
 							{
-								on_edit = ImGui::DragFloat("Inner Angle", &rtx_lights::rtx_debug_lights[i].inner_angle, 0.25f) ? true : on_edit;
-								on_edit = ImGui::DragFloat("Outer Angle", &rtx_lights::rtx_debug_lights[i].outer_angle, 0.25f) ? true : on_edit;
+								on_edit = ImGui::DragFloat("Inner Angle", &rtx_lights::rtx_debug_lights[i].inner_angle, 0.05f) ? true : on_edit;
+								on_edit = ImGui::DragFloat("Outer Angle", &rtx_lights::rtx_debug_lights[i].outer_angle, 0.05f) ? true : on_edit;
 							}
 
-							on_edit = ImGui::DragFloat("Range", &rtx_lights::rtx_debug_lights[i].range, 0.25f) ? true : on_edit;
+							on_edit = ImGui::DragFloat("Range", &rtx_lights::rtx_debug_lights[i].range, 0.10f) ? true : on_edit;
 						}
 
-						on_edit = ImGui::ColorEdit3("Color", rtx_lights::rtx_debug_lights[i].color, ImGuiColorEditFlags_Float) ? true : on_edit;
-						on_edit = ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.1f) ? true : on_edit;
+						on_edit = ImGui::ColorEdit3("Color", rtx_lights::rtx_debug_lights[i].color, ImGuiColorEditFlags_RGB) ? true : on_edit;
+						on_edit = ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.005f) ? true : on_edit;
 
 						if (rtx_lights::rtx_debug_lights[i].type != D3DLIGHT_DIRECTIONAL)
 						{

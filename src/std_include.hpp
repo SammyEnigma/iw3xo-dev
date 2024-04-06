@@ -69,6 +69,8 @@
 #define STATIC_ASSERT_SIZE(struct, size)				static_assert(sizeof(struct) == size, "Size check")
 #define STATIC_ASSERT_OFFSET(struct, member, offset)	static_assert(offsetof(struct, member) == offset, "Offset check")
 
+#define DEBUG_PRINT(_MSG) if constexpr (DEBUG) { OutputDebugStringA(_MSG); } //{ game::Com_PrintMessage(0, _MSG, 0); }
+
 #include <glm.hpp>
 #include <imgui.h>
 #include <imgui_impl_dx9.h>
