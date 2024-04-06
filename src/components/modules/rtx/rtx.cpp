@@ -282,6 +282,11 @@ namespace components
 	 */
 	void rtx::player_origin_model()
 	{
+		if (game::clc.demoplaying)
+		{
+			return;
+		}
+
 		const auto index = game::G_ModelIndex("rtx_player_origin");
 
 		if (  !axis_spawned
