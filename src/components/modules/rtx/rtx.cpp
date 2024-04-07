@@ -1180,6 +1180,10 @@ namespace components
 		// disable 'RB_DrawSun' call
 		utils::hook::nop(0x649BD8, 5);
 
+		// modellight alloc
+		//utils::hook::set<BYTE>(0x62ED7B + 2, 0x7F); // inc. modellight alloc break from 32 to 127
+		utils::hook::set(0x62ECA0, (PBYTE)"\xB8\x01\x00\x00\x00\xC3", 6); // always "alloc" and return 1 as lightingHandle
+
 		// disable loading of specular and normalmaps (de-clutter remix ui)
 		if (!flags::has_flag("load_normal_spec"))
 		{
