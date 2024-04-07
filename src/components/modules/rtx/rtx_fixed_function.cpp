@@ -81,6 +81,27 @@ namespace components
 		out[2] = (static_cast<float>(static_cast<std::uint8_t>(packed->array[2])) * (1.0f / 127.0f) + -1.0f) * scale;
 	}
 
+	// overrides materials on specified meshes (rtx::R_AllocTextureOverride)
+	bool apply_texture_overrides(const game::GfxModelSkinnedSurface* surf, const game::GfxCmdBufSourceState* source, const game::GfxCmdBufState* state [[maybe_unused]] )
+	{
+		const auto dev = game::get_device();
+		if (surf && surf->info.gfxEntIndex)
+		{
+			if (const auto idx = static_cast<int>(source->input.data->gfxEnts[surf->info.gfxEntIndex].materialTime);
+				idx > 0 && idx < 256)
+			{
+				const auto mask = rtx::textureOverrides[idx].dobjModelMask;
+				if (mask != 0xffff && mask >= 1337 && mask < 1400 && rtx::textureOverrides[idx].img2)
+				{
+					dev->SetTexture(0, rtx::textureOverrides[idx].img2->texture.basemap);
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 
 	// *
 	// static models (rigid)
@@ -355,7 +376,8 @@ namespace components
 		float mtx[4][4] = {};
 		rtx_fixed_function::build_worldmatrix_for_object(&mtx[0], model->placement.base.quat, model->placement.base.origin, model->placement.scale * custom_scalar);
 		dev->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
-		
+
+		apply_texture_overrides(&model->surf, source, state); // player shadow
 
 		if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer <= 2)
 		{
@@ -506,6 +528,8 @@ namespace components
 
 		// vertex format
 		dev->SetFVF(MODEL_VERTEX_FORMAT);
+
+		apply_texture_overrides(skinned_surf, source, state); // player shadow
 
 		//transform model into the scene by updating the worldmatrix
 		float mtx[4][4] = {};

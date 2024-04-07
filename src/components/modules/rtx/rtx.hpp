@@ -22,6 +22,9 @@ namespace components
 		static inline auto loc_disable_entity_culling = 0u;
 
 
+		static inline std::uint16_t textureOverrideCount = 0;
+		static inline game::GfxTextureOverride textureOverrides[256] = {};
+
 
 		static inline std::vector rtx_disable_world_culling_enum = { "default", "less", "all", "all-but-models" };
 

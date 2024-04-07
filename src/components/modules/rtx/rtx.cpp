@@ -39,10 +39,10 @@ namespace components
 		rtx_lights::spawn_light();
 		rtx::force_dvars_on_frame();
 
-		if (flags::has_flag("thirdperson"))
+		/*if (flags::has_flag("thirdperson"))
 		{
 			rtx::player_origin_model();
-		}
+		}*/
 
 		rtx_gui::skysphere_frame();
 
@@ -104,11 +104,14 @@ namespace components
 
 	void post_scene_rendering_stub()
 	{
-		const auto dev = game::glob::d3d9_device;
+		const auto dev = game::get_device();
 
 		// disable fog before rendering UI (who wants foggy UI elements right?)
 		// ^ can happen if no skysphere is rendered, which is rendered last and thus disables fog for everything afterwards
 		dev->SetRenderState(D3DRS_FOGENABLE, FALSE);
+
+		// normally done in R_ToggleSmpFrame but should be fine here
+		rtx::textureOverrideCount = 0;
 	}
 
 	// stub at the beginning of 'RB_CallExecuteRenderCommands' (before UI)
@@ -278,7 +281,7 @@ namespace components
 	/**
 	 * @brief spawns a little triangle at the origin of the player that is marked as 'player model body texture'
 	 *		  - triangle then acts as the origin for the bounding box that culls meshes marked with the 'player model' category
-	 *		  - not really working .. 
+	 *		  - not really working .. better technique below this func
 	 */
 	void rtx::player_origin_model()
 	{
@@ -321,6 +324,71 @@ namespace components
 		}
 	}
 
+	int R_AllocTextureOverride(game::Material* material, std::uint32_t model_index_mask, game::GfxImage* img1, int prev_override)
+	{
+		const auto override_idx = rtx::textureOverrideCount++;
+		if (override_idx < 256u)
+		{
+			rtx::textureOverrides[override_idx].material = material;
+			rtx::textureOverrides[override_idx].img1 = img1;
+			rtx::textureOverrides[override_idx].img2 = img1; //img2;
+			rtx::textureOverrides[override_idx].dobjModelMask = static_cast<std::uint16_t>(model_index_mask);
+			rtx::textureOverrides[override_idx].prev = static_cast<std::int16_t>(prev_override);
+			return override_idx;
+		}
+
+		//R_WarnOncePerFrame(R_WARN_TEXTURE_OVERRIDES, 256);
+		rtx::textureOverrideCount = 256;
+		return -1;
+	}
+
+	// this adds a unique material on the playermodel dobj and all of its submodels including the worldmodel of the gun
+	// textureoverride is then checked and set via rtx_fixed_function::apply_texture_overrides
+	int cg_player_add_obj_to_scene(const game::DObj_s* obj)
+	{
+		int tex_override = -1;
+
+		if (const auto	material = game::Material_RegisterHandle("rtx_player_shadow", 3); material
+			&& material->textureTable
+			&& material->textureTable->u.image
+			&& material->textureTable->u.image->name
+			&& !std::string_view(material->textureTable->u.image->name)._Equal("default"))
+		{
+			std::uint16_t model_hash = 1337u;
+			for (auto i = 0u; i < static_cast<std::uint8_t>(obj->numModels); i++)
+			{
+				tex_override = R_AllocTextureOverride(material, model_hash, material->textureTable->u.image, /*material->textureTable[1].u.image,*/ i == 0 ? -1 : tex_override);
+				model_hash += 2;
+			}
+		}
+
+		return tex_override;
+	}
+
+	int m_cg_player_stub_helper = 0;
+	__declspec(naked) void cg_player_stub()
+	{
+		const static uint32_t retn_addr = 0x445478;
+		__asm
+		{
+			// og
+			mov     ecx, [ebp + 0];
+
+			pushad;
+			push	esi; // dobj
+			call	cg_player_add_obj_to_scene;
+			mov		m_cg_player_stub_helper, eax;
+			add		esp, 4;
+			popad;
+
+			fild	m_cg_player_stub_helper;
+			jmp		retn_addr;
+		}
+	}
+
+
+	// *
+	// material related
 
 	void rtx::sky_material_update(std::string_view buffer, bool use_dvar)
 	{
@@ -1150,7 +1218,7 @@ namespace components
 		// hook beginning of 'RB_CallExecuteRenderCommands' (before UI)
 		utils::hook(0x6155E1, rb_call_execute_render_commands_stub, HOOK_JUMP).install()->quick();
 
-		if (flags::has_flag("thirdperson"))
+		if (!flags::has_flag("no_playershadow"))
 		{
 			// render third person model in first person
 			utils::hook::nop(0x42E187, 6); // CG_DrawFriendlyNames: do not disable name drawing
@@ -1164,6 +1232,8 @@ namespace components
 			utils::hook::set<BYTE>(0x456D36, 0xEB); // CG_AddPlayerWeapon: do not disable bolt effects
 			utils::hook::nop(0x457054, 6); // CG_AddViewWeapon: do not disable viewmodel
 			utils::hook::nop(0x451D8E, 2); // CG_UpdateThirdPerson: always enable "thirdperson"
+
+			utils::hook(0x445473, cg_player_stub, HOOK_JUMP).install()->quick(); // set unique texture for all parts of the model incl. gun 
 		}
 
 		// un-cheat + saved flag for fx_enable

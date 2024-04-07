@@ -95,6 +95,7 @@ or directly run `iw3xo.exe`
   - `-no_default_sky` :: disable sky spawning (map settings)
   - `-no_sun` :: disable sun spawning (map settings)
   - `-no_fog` :: disable fog (map settings)
+  - `-no_playershadow` :: disable player shadow casting
   - `-stock_effects` :: render effects using shaders
   - `-old_anti_culling` :: use the old anti culling system
   - `-no_forced_lod` :: do not set `r_forceLod` to `high` by default  

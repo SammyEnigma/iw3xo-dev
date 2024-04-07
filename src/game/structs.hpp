@@ -7726,6 +7726,14 @@ namespace game
 		float dist;
 	};
 
+	struct GfxTextureOverride
+	{
+		Material* material;
+		GfxImage* img1;
+		GfxImage* img2;
+		std::uint16_t dobjModelMask;
+		std::int16_t prev;
+	};
 
 #ifdef __cplusplus
 }
