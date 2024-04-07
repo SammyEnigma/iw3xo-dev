@@ -952,9 +952,9 @@ namespace components
 			if (dvars::rtx_culling_tweak_frustum) loc_culling_tweak_frustum = dvars::rtx_culling_tweak_frustum->current.enabled;
 			if (dvars::rtx_culling_tweak_smodel) loc_culling_tweak_smodel = dvars::rtx_culling_tweak_smodel->current.enabled;
 
+
 			// #
 			// old anti culling - activ if flag 'old_anti_culling' is set
-
 
 			// update world culling
 			if (dvars::rtx_disable_world_culling)
@@ -971,21 +971,12 @@ namespace components
 			}
 		}
 
-		// draw portal cells if r_showCellIndex is true
-		/*if (dvars::r_showCellIndex)
-		{
-			dvars::int_override("r_showPortals", dvars::r_showCellIndex->current.enabled);
-		}*/
-
 		// #
 		// #
 
 		dvars::bool_override("r_smp_backend", false); // reduces lag-spikes and generally increases fps, wobbly / laggy animated meshes
 		dvars::bool_override("r_skinCache", false); // ^ fix wobbly viewmodels
 		dvars::bool_override("r_smc_enable", false); // disable static model caching (stable hashes)
-		dvars::bool_override("r_depthPrepass", false); // remix does not like this
-		dvars::bool_override("r_zfeather", false);
-		dvars::bool_override("r_dof_enable", false);
 	}
 
 	//_common::force_dvars_on_init()
@@ -993,6 +984,18 @@ namespace components
 	{
 		rtx::force_dvars_on_frame();
 		dvars::bool_override("r_multiGpu", true); // fps ++
+		dvars::bool_override("r_floatz", true);
+		dvars::bool_override("r_autopriority", false);
+		dvars::bool_override("r_d3d9ex", false);
+		dvars::bool_override("r_vsync", false);
+		dvars::bool_override("r_preloadShaders", false);
+		dvars::bool_override("r_preloadShaders", false);
+		dvars::bool_override("r_altModelLightingUpdate", false); // prevents loading into a map
+		dvars::bool_override("r_zfeather", false);
+		dvars::bool_override("r_aaAlpha", false);
+		dvars::int_override("r_aaSamples", 1);
+		dvars::int_override("r_dlightLimit", 0);
+		dvars::bool_override("sm_enable", false);
 	}
 
 	// rtx::on_map_load()
@@ -1004,9 +1007,13 @@ namespace components
 		}
 
 		//dvars::bool_override("fx_drawClouds", false);
-		dvars::bool_override("r_pretess", true); // needed for fixed-function
+		dvars::bool_override("r_pretess", true); // bsp rendering fps ++
 		dvars::float_override("r_znear", 4.00195f);
 		dvars::float_override("r_znear_depthhack", 4.0f);
+		dvars::bool_override("r_glow", false);
+		dvars::bool_override("r_glow_allowed", false);
+		dvars::bool_override("r_depthPrepass", false);
+		dvars::bool_override("r_dof_enable", false);
 	}
 
 	void register_rtx_dvars()
