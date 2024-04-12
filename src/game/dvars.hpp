@@ -172,6 +172,7 @@ namespace dvars
 	extern game::dvar_s* r_showTessDist;
 	extern game::dvar_s* r_showCellIndex;
 
+	extern game::dvar_s* r_showModelNames;
 
 	extern game::dvar_s* r_fogTweaks;
 	extern game::dvar_s* r_fogTweaksColor;

@@ -125,6 +125,7 @@ or directly run `iw3xo.exe`
 	🟩 `r_showTess` :: draws material info (incl. all image names) of surfaces (geometry / models)  
 	🟩 `r_showTessDist` :: adjust draw distance of ^ info text  
 	🟩 `r_showCellIndex` :: show portal index info (useful for manual culling overrides via map settings)  
+	🟩 `r_showModelNames` :: draw names of static models around the player  
 	🟦 `rtx_sky_hacks` :: allows manually declaring textures as sky (maps w. multiple skies)  
 	🟦 `rtx_sky_materials` :: materials iw3xo flags as 'sky' materials (logic that replaces the default sky)
 

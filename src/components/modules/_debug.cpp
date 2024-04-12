@@ -543,6 +543,26 @@ namespace components
 		}
 	}
 
+	void show_smodel_names(const game::GfxViewParms* view_parms)
+	{
+		const auto data = game::get_backenddata();
+		for (auto m = 0u; m < game::gfx_world->dpvs.smodelCount; m++)
+		{
+			const auto smodel = &game::gfx_world->dpvs.smodelDrawInsts[m];
+			if (utils::vector::distance3(view_parms->origin, smodel->placement.origin) <= 1000.0f)
+			{
+				const game::vec3_t pos = { smodel->placement.origin[0], smodel->placement.origin[1], smodel->placement.origin[2] + 4.0f };
+
+				game::R_AddDebugString(
+					&data->debugGlobals,
+					pos,
+					game::COLOR_WHITE,
+					0.25f,
+					smodel->model->name);
+			}
+		}
+	}
+
 
 	// *
 	// Main
@@ -565,6 +585,11 @@ namespace components
 		if (components::active._pmove)
 		{
 			_pmove::draw_debug();
+		}
+
+		if (dvars::r_showModelNames && dvars::r_showModelNames->current.enabled)
+		{
+			show_smodel_names(view_parms);
 		}
 	}
 
@@ -592,5 +617,11 @@ namespace components
 
 		// hook RB_DrawDebug call in RB_EndSceneRendering to implement additional debug functions
 		utils::hook(0x6496EC, RB_EndSceneRendering_stub, HOOK_CALL).install()->quick();
+
+		dvars::r_showModelNames = game::Dvar_RegisterBool(
+			/* name		*/ "r_showModelNames",
+			/* desc		*/ "Show names of static models as 3D Text",
+			/* default	*/ false,
+			/* flags	*/ game::dvar_flags::none);
 	}
 }
