@@ -92,6 +92,10 @@ namespace components
 
 		if (s)
 		{
+			s->cell_settings.clear();
+			s->cell_settings.resize(256);
+			bool any_valid_overrides = false;
+
 			// for each cell with its forced indices with format -> [cell](index index index)
 			for (auto a = 1u; a < m_args.size(); a++)
 			{
@@ -105,23 +109,27 @@ namespace components
 
 				// which cell are we writing settings for?
 				const auto cell_index = utils::try_stoi(utils::split_string_between_delims(str, '[', ']'), -1);
-				if (cell_index != -1)
+				if (cell_index >= 0)
 				{
-					// check for duplicate cells
-					bool ignore_current_cell = false;
-					for (const auto& c : s->cell_settings)
+					// limit the vector to 1024 entries
+					if (cell_index >= 1024)
 					{
-						if (cell_index == c.cell_index)
-						{
-							ignore_current_cell = true;
-							break;
-						}
+						game::Com_PrintMessage(0, "[rtx] map-settings: found cell index override > 1024. Skipping...\n", 0);
+						continue;
 					}
 
-					// cell has been added already
-					if (ignore_current_cell)
+					// resize vector to up to 1024 entries
+					if (static_cast<std::uint32_t>(cell_index) >= s->cell_settings.size())
 					{
-						// print msg here
+						s->cell_settings.resize(cell_index + 1);
+					}
+
+					// get cell
+					const auto c = &s->cell_settings[cell_index];
+
+					// ignore duplicate cells
+					if (c->active)
+					{
 						continue;
 					}
 
@@ -129,16 +137,17 @@ namespace components
 					const auto indices_str = utils::split_string_between_delims(str, '(', ')');
 					const auto split_indices = utils::split(indices_str, ' ');
 
-					s->cell_settings.push_back(cell_settings_s(cell_index));
-					const auto c = &s->cell_settings.back();
-
-					// for each forced index
 					for (const auto& i : split_indices)
 					{
 						c->forced_cell_indices.push_back(utils::try_stoi(i, -1));
 					}
+
+					c->active = true;
+					any_valid_overrides = true;
 				}
 			}
+
+			s->cell_overrides_exist = any_valid_overrides;
 		}
 	}
 

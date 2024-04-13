@@ -14,8 +14,9 @@ namespace components
 
 		struct cell_settings_s
 		{
-			int cell_index = -1;
+			//int cell_index = -1;
 			std::vector<int> forced_cell_indices;
+			bool active = false;
 		};
 
 		struct map_settings_s
@@ -28,6 +29,7 @@ namespace components
 			float			sun_intensity = 1.0f;
 			int				sky_index = rtx_gui::SKY::SUNSET;
 			std::vector<cell_settings_s> cell_settings;
+			bool			cell_overrides_exist = false;
 		};
 
 		static inline const map_settings_s* settings() { return &m_loaded_map_settings; }

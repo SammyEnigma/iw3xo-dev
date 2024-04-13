@@ -738,22 +738,17 @@ namespace components
 				// #
 				// force cells defined in map_settings.ini
 
-				const auto& cell_settings = rtx_map_settings::settings()->cell_settings;
-				if (!cell_settings.empty())
+				if (rtx_map_settings::settings()->cell_overrides_exist && camera_cell_index < 1024)
 				{
-					for (const auto& c : cell_settings)
+					const auto& c_ow = rtx_map_settings::settings()->cell_settings[camera_cell_index];
+					if (c_ow.active)
 					{
-						if (c.cell_index == camera_cell_index)
+						for (const auto& i : c_ow.forced_cell_indices)
 						{
-							for (const auto& i : c.forced_cell_indices)
-							{
-								const auto forced_cell = &game::rgp->world->cells[i];
-								const auto c_index = forced_cell - game::rgp->world->cells;
-								game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(forced_cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
-								dpvsGlob->cellVisibleBits[(c_index >> 5) + 3] |= (1 << (c_index & 0x1F));
-							}
-
-							break;
+							const auto forced_cell = &game::rgp->world->cells[i];
+							const auto c_index = forced_cell - game::rgp->world->cells;
+							game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(forced_cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount);
+							dpvsGlob->cellVisibleBits[(c_index >> 5) + 3] |= (1 << (c_index & 0x1F));
 						}
 					}
 				}
