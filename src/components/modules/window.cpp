@@ -49,7 +49,7 @@ namespace components
 		}
 	}
 
-	HWND window::GetWindow()
+	HWND window::get_window()
 	{
 		return window::main_window_;
 	}
@@ -94,12 +94,32 @@ namespace components
 		return window::main_window_;
 	}
 
+	void R_InitHardware_stub()
+	{
+		// R_Cinematic_Init
+		utils::hook::call<void(__cdecl)()>(0x60D740)();
+
+		// auto noborder
+		const auto vidconf_width = reinterpret_cast<std::int32_t*>(0xCC9D0E8);
+		const auto vidconf_height = reinterpret_cast<std::int32_t*>(0xCC9D0EC);
+
+		if (const auto& var = game::Dvar_FindVar("r_fullscreen"); var && !var->current.enabled)
+		{
+			if (*vidconf_width == game::dx->adapterNativeWidth
+				&& *vidconf_height == game::dx->adapterNativeHeight)
+			{
+				SetWindowLongPtr(window::get_window(), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+				SetWindowPos(window::get_window(), nullptr, 0, 0, *vidconf_width, *vidconf_height, SWP_SHOWWINDOW | SWP_NOACTIVATE);
+			}
+		}
+	}
+
 	void window::apply_cursor()
 	{
 		SetCursor(LoadCursor(nullptr, IDC_ARROW));
 	}
 
-	BOOL WINAPI window::MessageHandler(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+	BOOL WINAPI window::message_handler(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{
 		auto menu_open = false;
 
@@ -196,11 +216,14 @@ namespace components
 		utils::hook::nop(0x5F49CA, 6);
 			 utils::hook(0x5F49CA, window::create_main_window, HOOK_CALL).install()->quick();
 
+		// hook 'R_Cinematic_Init' call to auto enable no_border 
+		utils::hook(0x5F486A, R_InitHardware_stub, HOOK_CALL).install()->quick();
+
 		// Don't let the game interact with the native cursor
 		utils::hook::set(0x69128C, window::show_cursor_hk);
 
 		// Use custom message handler
-		utils::hook::set(0x5774EE, window::MessageHandler);
+		utils::hook::set(0x5774EE, window::message_handler);
 
 		// Do not use vid_xpos / vid_ypos when r_noborder is enabled
 		utils::hook::nop(0x5F4C47, 9);

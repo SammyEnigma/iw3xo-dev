@@ -233,7 +233,7 @@ namespace components
 		// Regular
         io.FontDefault = io.Fonts->AddFontFromMemoryCompressedTTF(imgui_fonts::opensans_regular_compressed_data, imgui_fonts::opensans_regular_compressed_size, 18.0f);
 
-		ImGui_ImplWin32_Init(window::GetWindow());
+		ImGui_ImplWin32_Init(window::get_window());
 		ImGui_ImplDX9_Init(device);
 
 		// Style
