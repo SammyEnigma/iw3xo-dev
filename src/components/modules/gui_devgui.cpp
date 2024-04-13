@@ -101,30 +101,29 @@ namespace components
 					ImGui::EndTabItem();
 				}
 
-				if (components::active.draw_collision && ImGui::BeginTabItem("Collision/Export"))
+				if (components::active.draw_collision && ImGui::BeginTabItem("Collision"))
 				{
 					gui_devgui::menu_tab_collision(menu);
 					ImGui::EndTabItem();
 				}
 
-				if (!components::active.rtx)
+				if ((components::active.rtx || components::active.postfx_shaders) && ImGui::BeginTabItem("Shaders"))
 				{
-					if (components::active.postfx_shaders && ImGui::BeginTabItem("Shaders"))
+					if (!components::active.rtx)
 					{
 						gui_devgui::menu_tab_shaders(menu);
-						ImGui::EndTabItem();
 					}
+
+					// ------------------
+					gui::title_inside_seperator("Ocean Shader Settings", false, 0.0f, 20.0f, 2.0f);
+					
+					ocean::devgui_tab(menu);
+					ImGui::EndTabItem();
 				}
 
 				if (ImGui::BeginTabItem("Visuals"))
 				{
 					gui_devgui::menu_tab_visuals(menu);
-					ImGui::EndTabItem();
-				}
-
-				if (components::active.ocean && ImGui::BeginTabItem("Ocean"))
-				{
-					ocean::devgui_tab(menu);
 					ImGui::EndTabItem();
 				}
 

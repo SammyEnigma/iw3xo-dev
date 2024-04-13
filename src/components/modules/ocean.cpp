@@ -299,12 +299,12 @@ namespace components
 	{
 		const float OCEAN_SLIDER_SPEED = 0.01f;
 
-		if (ImGui::Button("Dump shader settings"))
+		if (ImGui::Button("Dump shader settings", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f)))
 		{
 			dump_settings();
 		}
 
-		if (ImGui::CollapsingHeader("Vertex + Pixelshader", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("Vertex + Pixelshader", ImGuiTreeNodeFlags_None))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 
@@ -315,7 +315,7 @@ namespace components
 			SPACING(0.0f, 4.0f); ImGui::Indent(-8.0f);
 		}
 
-		if (ImGui::CollapsingHeader("Vertexshader", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("Vertexshader", ImGuiTreeNodeFlags_None))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 
@@ -342,7 +342,7 @@ namespace components
 			SPACING(0.0f, 4.0f); ImGui::Indent(-8.0f);
 		}
 
-		if (ImGui::CollapsingHeader("Pixelshader", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("Pixelshader", ImGuiTreeNodeFlags_None))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 

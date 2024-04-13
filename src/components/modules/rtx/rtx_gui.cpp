@@ -2,41 +2,6 @@
 
 namespace components
 {
-	/**
-	 * @param title_text	text in between separator lines
-	 * @param pre_spacing	spacing in front of separator
-	 * @param width			0.0 => full window width
-	 * @param post_spacing	spacing applied after separator
-	 * @param thickness		thickness of separator line
-	 */
-	void title_inside_seperator(const char* title_text, bool pre_spacing, float width, float post_spacing, float thickness)
-	{
-		ImGui::BeginGroup();
-		if (pre_spacing) SPACING(0.0f, 12.0f);
-		if (width == 0.0f) width = ImGui::GetContentRegionAvail().x - 8.0f;
-
-		const float text_spacing = 6.0f;
-		const auto text_size = ImGui::CalcTextSize(title_text, nullptr, true);
-		const float first_sep_width = (width * 0.1f);
-
-		ImVec2 seperator_pos = ImGui::GetCursorScreenPos();
-		seperator_pos.y += (text_size.y * 0.5f);
-
-		ImGui::GetWindowDrawList()->AddLine(seperator_pos, ImVec2(seperator_pos.x + first_sep_width, seperator_pos.y), ImGui::GetColorU32(ImGuiCol_HeaderActive), thickness);
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + first_sep_width + text_spacing);
-		ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(ImGui::GetColorU32(ImGuiCol_HeaderActive)), title_text);
-		ImGui::SameLine(0.0f, text_spacing);
-
-		seperator_pos = ImGui::GetCursorScreenPos();
-		seperator_pos.y += (text_size.y * 0.5f);
-
-		const auto second_sep_width = width - text_size.x - first_sep_width - (text_spacing * 2.0f);
-		ImGui::GetWindowDrawList()->AddLine(seperator_pos, ImVec2(seperator_pos.x + second_sep_width, seperator_pos.y), ImGui::GetColorU32(ImGuiCol_HeaderActive), thickness);
-
-		SPACING(0.0f, post_spacing);
-		ImGui::EndGroup();
-	}
-
 	void rtx_gui::gui()
 	{
 		if (ImGui::CollapsingHeader("General Settings", ImGuiTreeNodeFlags_DefaultOpen))
@@ -71,7 +36,7 @@ namespace components
 			   "Enabling this setting will disable that limit but might cause instability.");
 
 			// -------------------
-			title_inside_seperator("Material Info", true, 0.0f, true, 2.0f);
+			gui::title_inside_seperator("Material Info", true, 0.0f, true, 2.0f);
 
 			if (dvars::r_showTess) {
 				ImGui::PushItemWidth(240.0f);
@@ -88,7 +53,7 @@ namespace components
 			}
 
 			// ------------------
-			title_inside_seperator("Culling", true, 0.0f, true, 2.0f);
+			gui::title_inside_seperator("Culling", true, 0.0f, true, 2.0f);
 
 			if (rtx::OLD_CULLING_ACTIVE)
 			{
@@ -133,7 +98,7 @@ namespace components
 			}
 
 			// ------------------
-			title_inside_seperator("Dev Settings", true, 0.0f, true, 2.0f);
+			gui::title_inside_seperator("Dev Settings", true, 0.0f, true, 2.0f);
 
 			if (dvars::r_showCellIndex) {
 				ImGui::Checkbox("Show Cell Indices", &dvars::r_showCellIndex->current.enabled); TT(dvars::r_showCellIndex->description);

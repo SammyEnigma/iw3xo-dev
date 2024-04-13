@@ -34,6 +34,8 @@ namespace components
 
 		static game::gui_menus_t& get_menu(game::GUI_MENUS id);
 
+		static void title_inside_seperator(const char* title_text, bool pre_spacing, float width, float post_spacing, float thickness);
+
 		// *
 		// set latched values + modified flag and return value pointer 
 		template <typename T>
