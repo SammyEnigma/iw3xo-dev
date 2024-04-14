@@ -54,8 +54,8 @@ namespace components
 			dev->SetRenderState(D3DRS_FOGENABLE, TRUE);
 			dev->SetRenderState(D3DRS_FOGCOLOR, s->fog_color.packed);
 			dev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR);
-			dev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&fog_start));
-			dev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&s->fog_distance));
+			dev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)&fog_start);
+			dev->SetRenderState(D3DRS_FOGEND, *(DWORD*)&s->fog_distance);
 		}
 
 		if (!flags::has_flag("no_sun"))
@@ -1260,13 +1260,13 @@ namespace components
 		// *
 		// allow 4k images (skysphere)
 
-		// set img alloc size from 0x600000 to 0x3000000
+		// set img alloc size from 0x600000 to 0x4000000 (67mb)
 		utils::hook::set<BYTE>(0x641CC7 + 3, 0x00);
-		utils::hook::set<BYTE>(0x641CC7 + 4, 0x03);
+		utils::hook::set<BYTE>(0x641CC7 + 4, 0x04);
 
 		// ^ cmp -> error if image larger
 		utils::hook::set<BYTE>(0x641C89 + 3, 0x00);
-		utils::hook::set<BYTE>(0x641C89 + 4, 0x03);
+		utils::hook::set<BYTE>(0x641C89 + 4, 0x04);
 		//utils::hook::set<BYTE>(0x641C8F, 0xEB); // disable warning completely
 
 		// dxvk's 'EnumAdapterModes' returns a lot of duplicates and the games array only has a capacity of 256 which is not enough depending on max res. and refreshrate

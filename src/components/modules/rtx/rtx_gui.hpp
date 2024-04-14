@@ -6,7 +6,7 @@ namespace components
 	{
 	public:
 		rtx_gui();
-		const char* get_name() override { return "rtx_gui"; };
+		const char* get_name() override { return "rtx_gui"; }
 
 		static void gui();
 
@@ -20,6 +20,22 @@ namespace components
 			SUNSET,
 			GALAXY2,
 			NIGHT2,
+			BACKLOT,
+			BLOC_VACANT,
+			BOG,
+			CARENTAN,
+			CARGOSHIP,
+			CITYSTREETS,
+			CONVOY_CROSSFIRE,
+			COUNTDOWN,
+			CRASH,
+			CRASH_SNOW,
+			CREEK,
+			FARM_PIPELINE,
+			OVERGROWN_SHIPMENT,
+			SHOWDOWN,
+			STRIKE,
+			ARGUN,
 			COUNT,
 		};
 
@@ -32,7 +48,23 @@ namespace components
 			"rtx_skysphere_overcast",
 			"rtx_skysphere_sunset_clouds",
 			"rtx_skysphere_galaxy02",
-			"rtx_skysphere_night02"
+			"rtx_skysphere_night02",
+			"rtx_skysphere_backlot",
+			"rtx_skysphere_bloc_vacant",
+			"rtx_skysphere_bog",
+			"rtx_skysphere_carentan",
+			"rtx_skysphere_cargo",
+			"rtx_skysphere_citystreets",
+			"rtx_skysphere_conv_crossf",
+			"rtx_skysphere_countdown",
+			"rtx_skysphere_crash",
+			"rtx_skysphere_crash_snow",
+			"rtx_skysphere_creek",
+			"rtx_skysphere_farm_pipe",
+			"rtx_skysphere_overg_shipm",
+			"rtx_skysphere_showdown",
+			"rtx_skysphere_strike",
+			"rtx_skysphere_argun"
 		};
 
 		static void skysphere_frame();

@@ -121,68 +121,64 @@ namespace components
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 
 			const auto sky_valid = skysphere_is_valid();
-			constexpr auto BUTTON_WIDTH = 100.0f;
+			constexpr auto BUTTON_WIDTH = 124.0f;
 
-			static float skygroup01_width = 0.0f;
-			gui::center_horz_begin(skygroup01_width);
+			const auto create_skybutton_row = [](const float button_width, const char* elem1, const rtx_gui::SKY id1, const char* elem2, const rtx_gui::SKY id2, const char* elem3, const rtx_gui::SKY id3, const char* elem4, const rtx_gui::SKY id4)
 			{
-				if (ImGui::Button("Hill [0]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::CLEAR);
+				if (ImGui::Button(utils::va("%s [%d]", elem1, id1), ImVec2(button_width, 0))) {
+					skysphere_spawn(id1);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Desert [1]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::DESERT);
+				if (ImGui::Button(utils::va("%s [%d]", elem2, id2), ImVec2(button_width, 0))) {
+					skysphere_spawn(id2);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Night [3]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::NIGHT);
+				if (ImGui::Button(utils::va("%s [%d]", elem3, id3), ImVec2(button_width, 0))) {
+					skysphere_spawn(id3);
 				}
 
 				ImGui::SameLine();
-				if (ImGui::Button("Night 2 [7]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::NIGHT2);
+				if (ImGui::Button(utils::va("%s [%d]", elem4, id4), ImVec2(button_width, 0))) {
+					skysphere_spawn(id4);
 				}
+			};
 
+			static float skygroup01_width = 0.0f; gui::center_horz_begin(skygroup01_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Hill", SKY::CLEAR, "Desert", SKY::DESERT, "Night", SKY::NIGHT, "Night 2", SKY::NIGHT2);
 				gui::center_horz_end(skygroup01_width);
 			}
 
-			static float skygroup02_width = 0.0f;
-			gui::center_horz_begin(skygroup02_width);
-			{
-				if (ImGui::Button("Overcast [4]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::OVERCAST);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Sunset [5]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::SUNSET);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Galaxy 1 [2]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::GALAXY1);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Galaxy 2 [6]", ImVec2(BUTTON_WIDTH, 0)))
-				{
-					skysphere_spawn(SKY::GALAXY2);
-				}
-
+			static float skygroup02_width = 0.0f; gui::center_horz_begin(skygroup02_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Overcast", SKY::OVERCAST, "Sunset", SKY::SUNSET, "Galaxy 1", SKY::GALAXY1, "Galaxy 2", SKY::GALAXY2);
 				gui::center_horz_end(skygroup02_width);
 			}
 
-			static float skygroup03_width = 0.0f;
-			gui::center_horz_begin(skygroup03_width);
+			gui::title_inside_seperator("Stock - Upscaled", false, 0.0f, 0.0f, 1.0f);
+
+			static float skygroup03_width = 0.0f; gui::center_horz_begin(skygroup03_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Backlot", SKY::BACKLOT, "Bloc/Vacant", SKY::BLOC_VACANT, "Bog", SKY::BOG, "Carentan", SKY::CARENTAN);
+				gui::center_horz_end(skygroup03_width);
+			}
+
+			static float skygroup04_width = 0.0f; gui::center_horz_begin(skygroup04_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Cargoship", SKY::CARGOSHIP, "Citystreets", SKY::CITYSTREETS, "Amb/Crossf", SKY::CONVOY_CROSSFIRE, "Countdown", SKY::COUNTDOWN);
+				gui::center_horz_end(skygroup04_width);
+			}
+
+			static float skygroup05_width = 0.0f; gui::center_horz_begin(skygroup05_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Crash", SKY::CRASH, "Crash Snow", SKY::CRASH_SNOW, "Creek", SKY::CREEK, "Farm/Pipe", SKY::FARM_PIPELINE);
+				gui::center_horz_end(skygroup05_width);
+			}
+
+			static float skygroup06_width = 0.0f; gui::center_horz_begin(skygroup06_width); {
+				create_skybutton_row(BUTTON_WIDTH, "Overg/Shipm", SKY::OVERGROWN_SHIPMENT, "Showdown", SKY::SHOWDOWN, "Strike", SKY::STRIKE, "Argun", SKY::ARGUN);
+				gui::center_horz_end(skygroup06_width);
+			}
+
+			static float skygroup_settings01_width = 0.0f;
+			gui::center_horz_begin(skygroup_settings01_width);
 			{
 				SPACING(4.0f, 0);
 
@@ -203,13 +199,13 @@ namespace components
 						ImGui::Checkbox("Follow player ", &dvars::rtx_sky_follow_player->current.enabled);
 					}
 				}
-				gui::center_horz_end(skygroup03_width);
+				gui::center_horz_end(skygroup_settings01_width);
 			}
 
 			if (sky_valid)
 			{
-				static float skygroup04_width = 0.0f;
-				gui::center_horz_begin(skygroup04_width);
+				static float skygroup_settings02_width = 0.0f;
+				gui::center_horz_begin(skygroup_settings02_width);
 				{
 					ImGui::PushItemWidth(90.0f);
 					ImGui::DragFloat("Speed", &skysphere_auto_rotation_speed, 0.01f, 0.01f, 10.0f, "%.2f");
@@ -217,7 +213,7 @@ namespace components
 
 					ImGui::SameLine(180, 0.0f);
 					ImGui::Checkbox("Auto Rotation", &skysphere_auto_rotation);
-					gui::center_horz_end(skygroup04_width);
+					gui::center_horz_end(skygroup_settings02_width);
 				}
 
 				if (ImGui::DragFloat3("Sphere Origin", rtx_gui::skysphere_model_origin, 1.0f, -360.0f, 360.0f, "%.2f"))
@@ -567,7 +563,7 @@ namespace components
 
 	const char* rtx_gui::skysphere_get_name_for_variant(std::uint32_t variant)
 	{
-		if (variant > SKY::COUNT)
+		if (variant >= SKY::COUNT)
 		{
 			return SKY_STRINGS[SKY::SUNSET];
 		}
@@ -635,18 +631,14 @@ namespace components
 	void rtx_gui::skysphere_change_model(int variant)
 	{
 		const std::int16_t model_index = game::G_ModelIndex(skysphere_get_name_for_variant(variant));
-
 		skysphere_model->model = model_index;
 		skysphere_model->s.index = model_index;
-
 		skysphere_variant = variant;
 	}
 
 	void rtx_gui::skysphere_spawn_fx(int variant)
 	{
-		const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, rtx_gui::skysphere_get_name_for_variant(variant)).fx;
-
-		if (fx)
+		if (const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, utils::va("rtx/%s", rtx_gui::skysphere_get_name_for_variant(variant))).fx; fx)
 		{
 			game::vec3_t axis[3] = {};
 			utils::vector::angles_to_axis(skysphere_model_rotation, axis);
