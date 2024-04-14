@@ -649,7 +649,8 @@ namespace components
 	// rtx_gui::SKY enum
 	void rtx_gui::skysphere_spawn(int variant)
 	{
-		if (game::clc.demoplaying)
+		// spawn sky via fx if playing demos or if client is not hosting the server
+		if (game::clc.demoplaying || !game::svs_header->clients)
 		{
 			if (skysphere_model_fx)
 			{

@@ -344,21 +344,31 @@ namespace components
 
 	// this adds a unique material on the playermodel dobj and all of its submodels including the worldmodel of the gun
 	// textureoverride is then checked and set via rtx_fixed_function::apply_texture_overrides
-	int cg_player_add_obj_to_scene(const game::DObj_s* obj)
+	int cg_player_add_obj_to_scene(const game::DObj_s* obj, const game::centity_s* cent)
 	{
 		int tex_override = -1;
 
-		if (const auto	material = game::Material_RegisterHandle("rtx_player_shadow", 3); material
-			&& material->textureTable
-			&& material->textureTable->u.image
-			&& material->textureTable->u.image->name
-			&& !std::string_view(material->textureTable->u.image->name)._Equal("default"))
+		const bool not_local = !game::svs_header->clients; // client is not hosting the game
+		const auto spectator_num = not_local ? -2 : game::g_clients[game::cgs->clientNum].spectatorClient;
+		const auto cl_ent = game::clients->snap.ps.clientNum;
+
+		// hide body of our player and body of the spectated player (but show our own body in the spectator cam)
+		if ((cent->nextState.clientNum == game::cgs->clientNum && spectator_num == -1) // centity = self but NOT spectating someone
+			|| spectator_num == cent->nextState.clientNum // centity = the spectated player
+			|| cl_ent == cent->nextState.clientNum) // non-local servers: centity = the spectated player 
 		{
-			std::uint16_t model_hash = 1337u;
-			for (auto i = 0u; i < static_cast<std::uint8_t>(obj->numModels); i++)
+			if (const auto	material = game::Material_RegisterHandle("rtx_player_shadow", 3); material
+				&& material->textureTable
+				&& material->textureTable->u.image
+				&& material->textureTable->u.image->name
+				&& !std::string_view(material->textureTable->u.image->name)._Equal("default"))
 			{
-				tex_override = R_AllocTextureOverride(material, model_hash, material->textureTable->u.image, /*material->textureTable[1].u.image,*/ i == 0 ? -1 : tex_override);
-				model_hash += 2;
+				std::uint16_t model_hash = 1337u;
+				for (auto i = 0u; i < static_cast<std::uint8_t>(obj->numModels); i++)
+				{
+					tex_override = R_AllocTextureOverride(material, model_hash, material->textureTable->u.image, i == 0 ? -1 : tex_override);
+					model_hash += 2;
+				}
 			}
 		}
 
@@ -375,10 +385,11 @@ namespace components
 			mov     ecx, [ebp + 0];
 
 			pushad;
+			push	ebx;
 			push	esi; // dobj
 			call	cg_player_add_obj_to_scene;
 			mov		m_cg_player_stub_helper, eax;
-			add		esp, 4;
+			add		esp, 8;
 			popad;
 
 			fild	m_cg_player_stub_helper;
