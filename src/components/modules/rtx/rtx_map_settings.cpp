@@ -11,7 +11,6 @@ namespace components
 	constexpr auto INI_SKY_INDEX = 12;
 	constexpr auto INI_ARGS_TOTAL = 13;
 
-
 	void rtx_map_settings::set_settings_for_loaded_map(bool reload_settings)
 	{
 		DEBUG_PRINT("[DEBUG] # Function: map_settings::set_settings_for_loaded_map()\n");
@@ -39,6 +38,19 @@ namespace components
 					utils::vector::scale3(m_loaded_map_settings.sun_color, (1.0f / 255.0f), m_loaded_map_settings.sun_color);
 
 					rtx_gui::skysphere_spawn(s.sky_index);
+
+					// spawn map markers
+					for (auto i = 0u; i < s.map_markers.size(); i++)
+					{
+						if (s.map_markers[i].active)
+						{
+							if (const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, utils::va("rtx/markers/rtx_marker_%02d", i)).fx; fx)
+							{
+								m_loaded_map_settings.map_markers[i].handle = game::FX_SpawnOrientedEffect(game::IDENTITY_AXIS[0], fx, 0, &s.map_markers[i].origin[0]);
+							}
+						}
+					}
+
 					found = true;
 					break;
 				}
@@ -66,31 +78,25 @@ namespace components
 		}
 	}
 
-	void rtx_map_settings::parse_culling()
+	rtx_map_settings::map_settings_s* rtx_map_settings::get_or_create_settings()
 	{
-		// check if there are map settings
-		bool map_settings_exist = false;
-		map_settings_s* s = nullptr;
-
 		// check if map settings exist
 		for (auto& e : m_settings)
 		{
 			if (e.mapname._Equal(m_args[INI_MAPNAME_ARG]))
 			{
-				s = &e;
-				map_settings_exist = true;
-				break;
+				return &e;
 			}
 		}
 
 		// create defaults if not
-		if (!map_settings_exist)
-		{
-			m_settings.push_back(map_settings_s(m_args[INI_MAPNAME_ARG]));
-			s = &m_settings.back();
-		}
+		m_settings.push_back(map_settings_s(m_args[INI_MAPNAME_ARG]));
+		return &m_settings.back();
+	}
 
-		if (s)
+	void rtx_map_settings::parse_culling()
+	{
+		if (map_settings_s* s = get_or_create_settings(); s)
 		{
 			s->cell_settings.clear();
 			s->cell_settings.resize(256);
@@ -151,6 +157,67 @@ namespace components
 		}
 	}
 
+	void rtx_map_settings::parse_markers()
+	{
+		if (map_settings_s* s = get_or_create_settings(); s)
+		{
+			// kill active fx in-case we reload settings 
+			for (auto i = 0u; i < m_loaded_map_settings.map_markers.size(); i++)
+			{
+				if (m_loaded_map_settings.map_markers[i].active && m_loaded_map_settings.map_markers[i].handle)
+				{
+					game::FX_KillEffect(m_loaded_map_settings.map_markers[i].handle);
+				}
+			}
+
+			s->map_markers.clear();
+			s->map_markers.resize(100);
+
+			for (auto a = 1u; a < m_args.size(); a++)
+			{
+				const auto& str = m_args[a];
+
+				if (str.empty())
+				{
+					// print msg here
+					continue;
+				}
+
+				// which marker are we writing settings for?
+				const auto marker_index = utils::try_stoi(utils::split_string_between_delims(str, '[', ']'), -1);
+				if (marker_index >= 0)
+				{
+					// limit the vector to 100 entries
+					if (marker_index >= 100)
+					{
+						game::Com_PrintMessage(0, "[rtx] map-settings: found marker index override > 100. Skipping...\n", 0);
+						continue;
+					}
+
+					// get marker
+					const auto m = &s->map_markers[marker_index];
+
+					// ignore duplicate markers
+					if (m->active)
+					{
+						continue;
+					}
+
+					// get and assign origin
+					const auto origin_str = utils::split_string_between_delims(str, '(', ')');
+					if (const auto xyz = utils::split(origin_str, ' ');
+						xyz.size() == 3u)
+					{
+						m->origin[0] = utils::try_stof(xyz[0], 0.0f);
+						m->origin[1] = utils::try_stof(xyz[1], 0.0f);
+						m->origin[2] = utils::try_stof(xyz[2], 0.0f);
+						m->active = true;
+					}
+				}
+			}
+		}
+	}
+
 	void rtx_map_settings::parse_settings()
 	{
 		if (m_args.size() == INI_ARGS_TOTAL)
@@ -192,7 +259,7 @@ namespace components
 		if (utils::fs::open_file_homepath("iw3xo\\rtx", "map_settings.ini", false, file))
 		{
 			std::string input;
-			bool reading_cull_settings = false;
+			auto parse_mode = PARSE_MODE::SETTINGS;
 
 			// read line by line
 			while (std::getline(file, input))
@@ -203,22 +270,32 @@ namespace components
 					continue;
 				}
 
-				if (!reading_cull_settings && utils::starts_with(input, "#CULL"))
+				if (parse_mode == SETTINGS && utils::starts_with(input, "#CULL"))
 				{
-					reading_cull_settings = true;
+					parse_mode = CULL;
+					continue;
+				}
+
+				if (parse_mode == CULL && utils::starts_with(input, "#MARKER"))
+				{
+					parse_mode = MARKER;
 					continue;
 				}
 
 				// split string on ','
 				m_args = utils::split(input, ',');
 
-				if (reading_cull_settings)
+				switch (parse_mode)
 				{
-					parse_culling();
-				}
-				else
-				{
+				case SETTINGS:
 					parse_settings();
+					break;
+				case CULL:
+					parse_culling();
+					break;
+				case MARKER:
+					parse_markers();
+					break;
 				}
 			}
 

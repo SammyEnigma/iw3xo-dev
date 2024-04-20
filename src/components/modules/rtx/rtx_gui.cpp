@@ -509,6 +509,27 @@ namespace components
 
 			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
+
+		if constexpr (DEBUG)
+		{
+			if (ImGui::CollapsingHeader("DEV", ImGuiTreeNodeFlags_None))
+			{
+				static game::FxEffect* marker_test = nullptr;
+				if (ImGui::Button("Spawn Marker FX"))
+				{
+					if (const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, "rtx/markers/rtx_marker_backlot_01").fx; fx)
+					{
+						marker_test = game::FX_SpawnOrientedEffect(game::IDENTITY_AXIS[0], fx, 0, game::vec3_origin);
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Delete Marker FX"))
+				{
+					game::FX_KillEffect(marker_test);
+				}
+			}
+		}
 	}
 
 	// ---------------------------------------------------------------------

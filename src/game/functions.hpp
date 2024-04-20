@@ -65,6 +65,7 @@ namespace game
 	static inline float COLOR_GREEN[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
 	static inline float COLOR_BLUE[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	static inline float vec3_origin[3] = { 0.0f, 0.0f, 0.0f };
+	static inline float IDENTITY_AXIS[3][3] = { 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 
 	extern game::TestLod g_testLods[4];
 
@@ -604,7 +605,7 @@ namespace game
 
 	void AxisToAngles(float* angles /*eax*/, const float(*axis)[3] /*ecx*/);
 
-	game::FxEffect* FX_SpawnOrientedEffect(const float* axis /*edx*/, game::FxEffectDef* def, int msec_begin, float* origin);
+	game::FxEffect* FX_SpawnOrientedEffect(const float* axis /*edx*/, game::FxEffectDef* def, int msec_begin, const float* origin);
 	void FX_KillEffect(game::FxEffect* def);
 
 	// *

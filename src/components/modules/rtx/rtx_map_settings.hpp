@@ -12,10 +12,24 @@ namespace components
 		static inline rtx_map_settings* p_this = nullptr;
 		static rtx_map_settings* get() { return p_this; }
 
+		enum PARSE_MODE : std::uint32_t
+		{
+			SETTINGS,
+			CULL,
+			MARKER
+		};
+
 		struct cell_settings_s
 		{
 			//int cell_index = -1;
 			std::vector<int> forced_cell_indices;
+			bool active = false;
+		};
+
+		struct marker_settings_s
+		{
+			float origin[3];
+			game::FxEffect* handle;
 			bool active = false;
 		};
 
@@ -30,6 +44,7 @@ namespace components
 			int				sky_index = rtx_gui::SKY::SUNSET;
 			std::vector<cell_settings_s> cell_settings;
 			bool			cell_overrides_exist = false;
+			std::vector<marker_settings_s> map_markers;
 		};
 
 		static inline const map_settings_s* settings() { return &m_loaded_map_settings; }
@@ -40,7 +55,9 @@ namespace components
 		static inline std::vector<map_settings_s> m_settings;
 		static inline std::vector<std::string> m_args;
 
+		map_settings_s* get_or_create_settings();
 		void parse_culling();
+		void parse_markers();
 		void parse_settings();
 		bool load_settings();
 	};

@@ -1701,7 +1701,7 @@ namespace game
 		}
 	}
 
-	game::FxEffect* FX_SpawnOrientedEffect(const float* axis /*edx*/, game::FxEffectDef* def, int msec_begin, float* origin)
+	game::FxEffect* FX_SpawnOrientedEffect(const float* axis /*edx*/, game::FxEffectDef* def, int msec_begin, const float* origin)
 	{
 		const static uint32_t func_addr = 0x4A14B0;
 		__asm
