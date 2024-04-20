@@ -30,7 +30,7 @@ namespace components
 
 		static void r_set_3d();
 		static bool r_set_material_stub(game::switch_material_t* swm, const game::GfxCmdBufState* state);
-		static void rb_show_tess(game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const float* center, const char* name, const float* color);
+		static void rb_show_tess(game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const float* center, const char* name, const float* color, game::DebugGlobals* manual_debug_glob = nullptr);
 		static void player_origin_model();
 
 		static void force_dvars_on_frame();

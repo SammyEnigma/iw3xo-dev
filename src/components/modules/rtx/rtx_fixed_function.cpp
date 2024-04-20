@@ -799,7 +799,7 @@ namespace components
 		return true;
 	}
 
-	void R_DrawBspTris([[maybe_unused]] game::GfxCmdBufSourceState* source, [[maybe_unused]] const game::GfxCmdBufPrimState* state, const game::srfTriangles_t* tris, std::uint32_t base_index, std::uint32_t tri_count)
+	void R_DrawBspTris([[maybe_unused]] game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const game::srfTriangles_t* tris, std::uint32_t base_index, std::uint32_t tri_count, const game::GfxSurface* surf)
 	{
 		const auto dev = game::get_device();
 
@@ -819,10 +819,21 @@ namespace components
 		dev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 #endif
 
+		if (dvars::r_showTess && dvars::r_showTess->current.enabled && dvars::r_showTess->current.integer >= 3 && dvars::r_showTess->current.integer < 5)
+		{
+			const game::vec3_t center =
+			{
+				(surf->bounds[0][0] + surf->bounds[1][0]) * 0.5f,
+				(surf->bounds[0][1] + surf->bounds[1][1]) * 0.5f,
+				(surf->bounds[0][2] + surf->bounds[1][2]) * 0.5f
+			};
+			rtx::rb_show_tess(source, state, center, "BSP-NO-PRE", game::COLOR_WHITE, &game::get_frontenddata()->debugGlobals);
+		}
+
 		dev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, tris->vertexCount, base_index, tri_count);
 	}
 
-	void R_DrawBspDrawSurfs(game::GfxTrianglesDrawStream* draw_stream, game::GfxCmdBufPrimState* state)
+	void R_DrawBspDrawSurfs(game::GfxTrianglesDrawStream* draw_stream, game::GfxCmdBufState* state)
 	{
 		const auto dev = game::get_device();
 
@@ -843,18 +854,19 @@ namespace components
 		game::srfTriangles_t* prev_tris = nullptr;
 		unsigned int base_index = 0u, count = 0u, tri_count = 0u;
 		auto base_vertex = -1;
+		game::GfxSurface* bsp_surf = nullptr;
 
 		while (R_ReadBspDrawSurfs(&draw_stream->primDrawSurfPos, &list, &count))
 		{
 			for (auto index = 0u; index < count; ++index)
 			{
-				const auto bsp_surf = &game::rgp->world->dpvs.surfaces[list[index]];
+				bsp_surf = &game::rgp->world->dpvs.surfaces[list[index]];
 				if (base_vertex != bsp_surf->tris.firstVertex || base_index + 3u * tri_count != static_cast<unsigned>(bsp_surf->tris.baseIndex))
 				{
 					if (prev_tris)
 					{
-						const auto base = R_SetIndexData(state, &game::rgp->world->indices[prev_tris->baseIndex], tri_count);
-						R_DrawBspTris(game::gfxCmdBufSourceState, state, prev_tris, base, tri_count);
+						const auto base = R_SetIndexData(&state->prim, &game::rgp->world->indices[prev_tris->baseIndex], tri_count);
+						R_DrawBspTris(game::gfxCmdBufSourceState, state, prev_tris, base, tri_count, bsp_surf);
 					}
 
 					tri_count = 0;
@@ -874,8 +886,8 @@ namespace components
 
 		if (prev_tris)
 		{
-			const auto base = R_SetIndexData(state, &game::rgp->world->indices[prev_tris->baseIndex], tri_count);
-			R_DrawBspTris(game::gfxCmdBufSourceState, state, prev_tris, base, tri_count);
+			const auto base = R_SetIndexData(&state->prim, &game::rgp->world->indices[prev_tris->baseIndex], tri_count);
+			R_DrawBspTris(game::gfxCmdBufSourceState, state, prev_tris, base, tri_count, bsp_surf);
 		}
 
 		dev->SetFVF(NULL);
@@ -1475,6 +1487,7 @@ namespace components
 		utils::hook(0x6486F4, R_DrawBspDrawSurfsPreTess, HOOK_CALL).install()->quick();
 
 		// ^ without batching
+		utils::hook::nop(0x648553, 6); // pass 'GfxCmdBufState' and not 'GfxCmdBufPrimState'
 		utils::hook(0x648563, R_DrawBspDrawSurfs, HOOK_CALL).install()->quick();
 
 		// fixed-function rendering of brushmodels

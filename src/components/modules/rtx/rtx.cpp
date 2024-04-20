@@ -184,8 +184,10 @@ namespace components
 	// model:	[1] techset - [2] material
 	// bsp:		[3] techset - [4] material
 	// bmodel:	[5] techset - [6] material
-	void rtx::rb_show_tess(game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const float* center, const char* name, const float* color)
+	void rtx::rb_show_tess(game::GfxCmdBufSourceState* source, game::GfxCmdBufState* state, const float* center, const char* name, const float* color, game::DebugGlobals* manual_debug_glob)
 	{
+		const auto debug_glob = manual_debug_glob ? manual_debug_glob : &source->input.data->debugGlobals;
+
 		float offset_center[3];
 		offset_center[0] = center[0];
 		offset_center[1] = center[1];
@@ -225,17 +227,17 @@ namespace components
 			{
 				// offset_center[2] = (((float)state->techType - 16.0f) * 0.3f) + offset_center[2];
 				// header
-				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("%s: %s", name, tech->name));
+				game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("%s: %s", name, tech->name));
 				font_scale *= 0.5f;
 
 				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
-				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [TQ]: %s", state->material->techniqueSet->name));
+				game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("> [TQ]: %s", state->material->techniqueSet->name));
 
 				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
-				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [VS] %s", tech->passArray[0].vertexShader ? tech->passArray[0].vertexShader->name : "<NONE>"));
+				game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("> [VS] %s", tech->passArray[0].vertexShader ? tech->passArray[0].vertexShader->name : "<NONE>"));
 
 				offset_center[2] -= viewmodel_string ? 0.25f : 2.5f;
-				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [PS] %s", tech->passArray[0].pixelShader ? tech->passArray[0].pixelShader->name : "<NONE>"));
+				game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("> [PS] %s", tech->passArray[0].pixelShader ? tech->passArray[0].pixelShader->name : "<NONE>"));
 				break;
 			}
 
@@ -244,7 +246,7 @@ namespace components
 			case 6: // material bmodel
 			{
 				// header
-				game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("%s: %s", name, state->material->info.name));
+				game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("%s: %s", name, state->material->info.name));
 				font_scale *= 0.5f;
 
 				for (auto i = 0; i < state->material->textureCount; i++)
@@ -266,7 +268,7 @@ namespace components
 						default: semantic_str = "C+"; break;
 						}
 
-						game::R_AddDebugString(&source->input.data->debugGlobals, offset_center, color, font_scale, utils::va("> [%s] %s", semantic_str, img->name)); // static_cast<std::uint8_t>(img->semantic)
+						game::R_AddDebugString(debug_glob, offset_center, color, font_scale, utils::va("> [%s] %s", semantic_str, img->name)); // static_cast<std::uint8_t>(img->semantic)
 					}
 				}
 				break;
