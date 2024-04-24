@@ -526,7 +526,10 @@ namespace components
 				ImGui::SameLine();
 				if (ImGui::Button("Delete Marker FX"))
 				{
-					game::FX_KillEffect(marker_test);
+					if (marker_test)
+					{
+						game::FX_KillEffect(marker_test);
+					}
 				}
 			}
 		}
