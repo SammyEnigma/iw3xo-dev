@@ -117,6 +117,7 @@ or directly run `iw3xo.exe`
 	🟩 `rtx_culling_tweak_maxs` :: prevents a lot of culling  
 	🟩 `rtx_culling_tweak_frustum` :: disables frustum culling  
 	🟩 `rtx_culling_tweak_smodel` :: disables static model culling  
+	🟩 `rtx_culling_plane_dist` :: distance of frustum culling planes
 
 	#### General dvars:
 	🟩 `r_forceLod` :: force all models to a specific LOD  

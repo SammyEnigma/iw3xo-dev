@@ -1090,6 +1090,14 @@ namespace components
 		dvars::bool_override("r_glow_allowed", false);
 		dvars::bool_override("r_depthPrepass", false);
 		dvars::bool_override("r_dof_enable", false);
+
+		if (dvars::rtx_culling_plane_dist)
+		{
+			for (auto& plane : rtx::m_frustum_plane_offsets)
+			{
+				plane = dvars::rtx_culling_plane_dist->current.value;
+			}
+		}
 	}
 
 	void register_rtx_dvars()
@@ -1383,6 +1391,14 @@ namespace components
 				/* desc		*/ "Disable static model frustum culling (reduces culling)",
 				/* default	*/ true,
 				/* flags	*/ game::dvar_flags::saved);
+
+			dvars::rtx_culling_plane_dist = game::Dvar_RegisterFloat(
+				/* name		*/ "rtx_culling_plane_dist",
+				/* desc		*/ "Distance of dpvs culling-planes",
+				/* default	*/ 1250.0f,
+				/* minVal	*/ -50000.0f,
+				/* maxVal	*/ 50000.0f,
+				/* flags	*/ game::dvar_flags::none);
 
 
 			// never cull brushmodels via dpvs

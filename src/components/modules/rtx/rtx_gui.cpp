@@ -89,10 +89,21 @@ namespace components
 				SPACING(0.0f, 4.0f);
 				if (ImGui::CollapsingHeader("Frustumplanes (Default = 0)"))
 				{
+					if (dvars::rtx_culling_plane_dist)
+					{
+						if (ImGui::DragFloat("Plane Distance Setter", &dvars::rtx_culling_plane_dist->current.value, 0.2f, -50000.0f, 50000.0f, "%.0f"))
+						{
+							for (auto& plane : rtx::m_frustum_plane_offsets)
+							{
+								plane = dvars::rtx_culling_plane_dist->current.value;
+							}
+						}
+					}
+
 					for (auto i = 0u; i < rtx::FRUSTUM_PLANE_OFFSETS_COUNT; i++)
 					{
 						ImGui::DragFloat(utils::va("Frustumplane Offset [%d]", i), &rtx::m_frustum_plane_offsets[i], 
-							1.0f, -20000.0f, 20000.0f, "%.0f");
+							0.2f, -50000.0f, 50000.0f, "%.0f");
 					}
 				}
 			}
