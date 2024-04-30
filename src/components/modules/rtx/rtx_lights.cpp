@@ -95,7 +95,7 @@ namespace components
 				// we need to handle view and world separately
 				// ignore thirdperson if thirdperson-hack is enabled
 
-				if (game::cgs->renderingThirdPerson && !flags::has_flag("thirdperson"))
+				if (game::cgs->renderingThirdPerson && flags::has_flag("no_playershadow"))
 				{
 					auto obj = game::objBuf[game::clientObjMap[game::cgs->predictedPlayerEntity.nextState.number]];
 					if (game::DObjGetBoneIndex(&obj, game::scr_const->tag_flash, &bone))
