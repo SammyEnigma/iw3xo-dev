@@ -95,12 +95,11 @@ or directly run `iw3xo.exe`
   - `-no_default_sky` :: disable sky spawning (map settings)
   - `-no_sun` :: disable sun spawning (map settings)
   - `-no_fog` :: disable fog (map settings)
-  - `-no_playershadow` :: disable player shadow casting
   - `-stock_effects` :: render effects using shaders
   - `-old_anti_culling` :: use the old anti culling system
   - `-no_forced_lod` :: do not set `r_forceLod` to `high` by default  
   - `-load_normal_spec` :: enable loading of specular and normal maps (if you need to for some reason)
-  - `-thirdperson` :: using the `thirdperson` flag will render the thirdperson playermodel into the firstperson view (for shadow casting. Assign the _Player Model_ material category to hide it from your view (keeps casting shadows) (WIP - also spawns a triangle with a unique texture used as the bounding box origin to hide meshes using textures marked as player model)    
+  - `-no_playershadow` :: disable player shadow casting (required to get thirdperson to work)   
 
 > - commandline example: &ensp;`c:\path\iw3xo.exe -rtx -no_default_sky -stock_effects` 
 

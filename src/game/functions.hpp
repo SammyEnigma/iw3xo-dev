@@ -94,6 +94,8 @@ namespace game
 	extern int*	com_frameTime;
 	extern float* com_timescaleValue;
 
+	extern bool is_local_game();
+	extern bool is_demo_playing();
 
 	// *
 	// radiant / cgame

@@ -84,6 +84,15 @@ namespace game
 	int* com_frameTime = reinterpret_cast<int*>(0x1476EFC);
 	float* com_timescaleValue = reinterpret_cast<float*>(0x1435D68);
 
+	bool is_local_game()
+	{
+		return game::svs_header->clients;
+	}
+
+	bool is_demo_playing()
+	{
+		return game::clc.demoplaying;
+	}
 
 	// *
 	// radiant / cgame

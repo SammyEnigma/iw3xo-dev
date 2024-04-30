@@ -426,15 +426,15 @@ namespace components
 						{
 							if (rtx_lights::rtx_debug_lights[i].type == D3DLIGHT_SPOT)
 							{
-								on_edit = ImGui::DragFloat("Inner Angle", &rtx_lights::rtx_debug_lights[i].inner_angle, 0.05f) ? true : on_edit;
-								on_edit = ImGui::DragFloat("Outer Angle", &rtx_lights::rtx_debug_lights[i].outer_angle, 0.05f) ? true : on_edit;
+								on_edit = ImGui::SliderFloat("Inner Angle", &rtx_lights::rtx_debug_lights[i].inner_angle, 0.0f, rtx_lights::rtx_debug_lights[i].outer_angle, "%.1f") ? true : on_edit;
+								on_edit = ImGui::SliderFloat("Outer Angle", &rtx_lights::rtx_debug_lights[i].outer_angle, 0.0f, 180.0f, "%.1f") ? true : on_edit;
 							}
 
 							on_edit = ImGui::DragFloat("Range", &rtx_lights::rtx_debug_lights[i].range, 0.10f) ? true : on_edit;
 						}
 
 						on_edit = ImGui::ColorEdit3("Color", rtx_lights::rtx_debug_lights[i].color, ImGuiColorEditFlags_RGB) ? true : on_edit;
-						on_edit = ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.005f) ? true : on_edit;
+						on_edit = ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.005f, 0.0f) ? true : on_edit;
 
 						if (rtx_lights::rtx_debug_lights[i].type != D3DLIGHT_DIRECTIONAL)
 						{

@@ -350,10 +350,17 @@ namespace components
 		state->prim.device->SetIndices(mem->indexBuffer);
 
 		float custom_scalar = 1.0f;
+		auto obj_origin = &model->placement.base.origin[0];
 
 		// skysphere materials need to have sort = sky in assetmanager
 		if (state->material && state->material->info.sortKey == 5)
 		{
+			// gsc is running at 20fps so the moving sky might look a little laggy - fix by directly rendering sky at player origin 
+			if (dvars::rtx_sky_follow_player && dvars::rtx_sky_follow_player->current.enabled)
+			{
+				obj_origin = game::cgs->predictedPlayerState.origin;
+			}
+
 			custom_scalar = rtx_gui::skysphere_scale;
 
 			// disable fog for skysphere
@@ -374,7 +381,7 @@ namespace components
 
 		// transform model into the scene by updating the worldmatrix
 		float mtx[4][4] = {};
-		rtx_fixed_function::build_worldmatrix_for_object(&mtx[0], model->placement.base.quat, model->placement.base.origin, model->placement.scale * custom_scalar);
+		rtx_fixed_function::build_worldmatrix_for_object(&mtx[0], model->placement.base.quat, obj_origin, model->placement.scale * custom_scalar);
 		dev->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&mtx));
 
 		apply_texture_overrides(&model->surf, source, state); // player shadow
