@@ -50,6 +50,20 @@ namespace components
 	constexpr auto FX_VERTEX_FORMAT = (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1 | D3DFVF_TEX2);
 
 
+	// #
+	struct unpacked_mark_vert
+	{
+		game::vec3_t pos;
+		game::vec3_t normal;
+		unsigned int color;
+		game::vec2_t texcoord;
+		game::vec2_t unused;
+	};
+
+	// D3DFVF_TEX2 is there to get us to a stride of 44, so that we dont have to create our own indexbuffer
+	constexpr auto FX_MARKS_STRIDE = 44u; // GfxWorldVertex
+	constexpr auto FX_MARKS_FORMAT = (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 | D3DFVF_TEX2);
+
 	/**
 	 * @brief update 'state->prim.streams' and set d3d device stream source
 	 */
@@ -1064,6 +1078,56 @@ namespace components
 		}
 	}
 
+	// func is called twice, once for world vertices and once for packed vertices
+	void R_TessMarkMeshList_begin([[maybe_unused]] const game::GfxCmdBufState* state)
+	{
+		const auto dev = game::get_device();
+		const auto decl = state->prim.vertDeclType; // world or packed
+
+		// #
+		// setup fixed-function
+
+		// vertex format
+ 		dev->SetFVF(FX_MARKS_FORMAT);
+
+		// def. needed or the game will render the mesh using shaders
+		dev->SetVertexShader(nullptr);
+		dev->SetPixelShader(nullptr);
+
+		// vertices are already in 'world space' so origin is at 0 0 0
+		game::GfxMatrix world_mtx = {};
+		world_mtx.m[0][0] = 1.0f;
+		world_mtx.m[1][1] = 1.0f;
+		world_mtx.m[2][2] = 1.0f;
+		world_mtx.m[3][3] = 1.0f;
+		dev->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&world_mtx.m[0]));
+
+		// texture alpha + vertex alpha (decal blending)
+		dev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE); // D3DTA_TEXTURE
+		dev->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+		dev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE); // modulate is not enough
+
+		// set stream source
+		dev->SetStreamSource(0, 
+			decl == game::VERTDECL_WORLD ? rtx_fixed_function::dynamic_markmesh_world_vb : rtx_fixed_function::dynamic_markmesh_model_vb, 
+			0, FX_MARKS_STRIDE);
+	}
+
+	__declspec(naked) void R_TessMarkMeshList_begin_stub()
+	{
+		const static uint32_t retn_addr = 0x645F78;
+		__asm
+		{
+			pushad;
+			push	edi;
+			call	R_TessMarkMeshList_begin;
+			add		esp, 4;
+			popad;
+
+			jmp		retn_addr;
+		}
+	}
+
 	// *
 	// Tess techniques (2d, debug visualization etc.)
 
@@ -1234,7 +1298,7 @@ namespace components
 		const auto frontend_data = game::get_frontenddata();
 
 		// alloc buffer on first use
-		// released on map shutdown - main_module::on_map_shutdown
+		// released on map shutdown - free_fixed_function_buffers
 		if (!dynamic_codemesh_vb)
 		{
 			//const int additional_size_to_add = (FX_VERTEX_STRIDE - MODEL_VERTEX_STRIDE) * 0x4000;
@@ -1302,12 +1366,137 @@ namespace components
 		frontend_data->codeMesh.vb.buffer->Unlock();
 	}
 
+	void rtx_fixed_function::copy_marks_buffer()
+	{
+		const auto dev = game::get_device();
+		const auto frontend_data = game::get_frontenddata();
+
+		// alloc buffer on first use
+		// released on map shutdown - free_fixed_function_buffers
+		if (!dynamic_markmesh_world_vb)
+		{
+			if (const auto hr = dev->CreateVertexBuffer(frontend_data->markMesh.vb.total, D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC, FX_MARKS_FORMAT, D3DPOOL_DEFAULT, &dynamic_markmesh_world_vb, nullptr);
+				hr > 0)
+			{
+				__debugbreak();
+				game::Com_Error(0, "rtx_fixed_function::copy_marks_buffer :: Failed to create dynamic vertexbufffer (dynamic_markmesh_vb)");
+			}
+		}
+
+		// 
+		if (!dynamic_markmesh_model_vb)
+		{
+			if (const auto hr = dev->CreateVertexBuffer(frontend_data->markMesh.vb.total, D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC, FX_MARKS_FORMAT, D3DPOOL_DEFAULT, &dynamic_markmesh_model_vb, nullptr);
+				hr > 0)
+			{
+				__debugbreak();
+				game::Com_Error(0, "rtx_fixed_function::copy_marks_buffer :: Failed to create dynamic vertexbufffer (dynamic_markmesh_model_vb)");
+			}
+		}
+
+
+		// #
+		// lock markmesh vb -> unpack vertex data and place new data into the dynamic_markmesh_world_vb & dynamic_markmesh_model_vb
+
+		void* og_buffer_data;
+		if (const auto hr = frontend_data->markMesh.vb.buffer->Lock(0, frontend_data->markMesh.vb.used, &og_buffer_data, D3DLOCK_READONLY);
+			hr < 0)
+		{
+			__debugbreak();
+			game::Com_Error(0, "rtx_fixed_function::copy_marks_buffer :: failed locking the markMesh buffer");
+		}
+
+		// #
+
+		void* buffer_data = nullptr; void* buffer_data_model = nullptr;
+		if (auto hr = dynamic_markmesh_world_vb->Lock(0, frontend_data->markMesh.vb.used, &buffer_data, D3DUSAGE_WRITEONLY);
+			hr >= 0)
+		{
+			if (hr = dynamic_markmesh_model_vb->Lock(0, frontend_data->markMesh.vb.used, &buffer_data_model, D3DUSAGE_WRITEONLY);
+				hr >= 0)
+			{
+				memset(buffer_data, 0, frontend_data->markMesh.vb.used);
+				memset(buffer_data_model, 0, frontend_data->markMesh.vb.used);
+				for (auto i = 0u; i * frontend_data->markMesh.vertSize < (unsigned)frontend_data->markMesh.vb.used && i < 0x1800; i++)
+				{
+					// position of vert within the vertex buffer
+					const auto v_pos_in_buffer = i * frontend_data->markMesh.vertSize; // size of GfxWorldVertex
+
+					// vert in our custom buffers
+					const auto v = reinterpret_cast<unpacked_mark_vert*>(((DWORD)buffer_data + v_pos_in_buffer));
+					const auto v_model = reinterpret_cast<unpacked_mark_vert*>(((DWORD)buffer_data_model + v_pos_in_buffer));
+
+					// source vertex (can be GfxPackedVertex or GfxWorldVertex)
+					const auto src_vert = reinterpret_cast<game::GfxWorldVertex*>(((DWORD)og_buffer_data + v_pos_in_buffer));
+					const auto src_vert_model = reinterpret_cast<game::GfxPackedVertex*>(((DWORD)og_buffer_data + v_pos_in_buffer));
+
+					// packed vertex color : used for color and alpha manip.
+					v->color = src_vert->color.packed;
+					v_model->color = v->color;
+
+					// there are two types of vertex types in the og buffer
+					// 1) world (bsp brush) verts with unpacked texcoords (stride = 44)
+					// 2) model verts with packed texcoords (stride = 36)
+					// -> determine the type by checking if the last 2 elements are 0
+					// ^ not reliable - using two buffers now
+					//if (src_vert->normal.packed == 0u && src_vert->tangent.packed == 0u)
+					{
+						// unpack and assign vert normal
+						unpack_normal(&src_vert_model->normal, v_model->normal); // offset of packed normal differs
+						game::Vec2UnpackTexCoords(src_vert_model->texCoord.packed, v_model->texcoord);
+
+
+					}
+					//else
+					{
+						unpack_normal(&src_vert->normal, v->normal); // offset of packed normal differs
+						v->texcoord[0] = src_vert->texCoord[0];
+						v->texcoord[1] = src_vert->texCoord[1];
+					}
+
+					// populate second set of texcoords, just in case
+					v->unused[0] = 0.0f;
+					v->unused[1] = 0.0f;
+					v_model->unused[0] = 0.0f;
+					v_model->unused[1] = 0.0f;
+
+					// vert pos + slightly offset mark along its surface normal to reduce z conflicts
+					v->pos[0] = src_vert->xyz[0]; //+ (v->normal[0] * 0.001f * static_cast<float>((i % 100)));
+					v->pos[1] = src_vert->xyz[1]; //+ (v->normal[1] * 0.001f * static_cast<float>((i % 100)));
+					v->pos[2] = src_vert->xyz[2]; //+ (v->normal[2] * 0.001f * static_cast<float>((i % 100)));
+
+					v_model->pos[0] = src_vert->xyz[0];
+					v_model->pos[1] = src_vert->xyz[1];
+					v_model->pos[2] = src_vert->xyz[2];
+				}
+
+				dynamic_markmesh_model_vb->Unlock();
+			}
+			else
+			{
+				dynamic_markmesh_model_vb->Release();
+				dynamic_markmesh_model_vb = nullptr;
+			}
+
+			dynamic_markmesh_world_vb->Unlock();
+		}
+		else
+		{
+			dynamic_markmesh_world_vb->Release();
+			dynamic_markmesh_world_vb = nullptr;
+		}
+
+		// unlock og codemesh vb
+		frontend_data->markMesh.vb.buffer->Unlock();
+	}
+
 	void r_endframe_hk()
 	{
 		// og call - R_EndFrame
 		utils::hook::call<void(__cdecl)()>(0x5F7680)();
 
 		rtx_fixed_function::copy_fx_buffer();
+		rtx_fixed_function::copy_marks_buffer();
 	}
 
 
@@ -1425,6 +1614,18 @@ namespace components
 		{
 			rtx_fixed_function::dynamic_codemesh_vb->Release();
 			rtx_fixed_function::dynamic_codemesh_vb = nullptr;
+		}
+
+		// cleanup marks buffer
+		if (rtx_fixed_function::dynamic_markmesh_world_vb)
+		{
+			rtx_fixed_function::dynamic_markmesh_world_vb->Release();
+			rtx_fixed_function::dynamic_markmesh_world_vb = nullptr;
+		}
+		if (rtx_fixed_function::dynamic_markmesh_model_vb)
+		{
+			rtx_fixed_function::dynamic_markmesh_model_vb->Release();
+			rtx_fixed_function::dynamic_markmesh_model_vb = nullptr;
 		}
 
 		// cleanup model buffers
@@ -1545,5 +1746,11 @@ namespace components
 			utils::hook(0x645E1A, R_TessCodeMeshList_end_stub, HOOK_JUMP).install()->quick();
 			utils::hook(0x475065, r_endframe_hk, HOOK_CALL).install()->quick(); // copy & unpack data of effect vertex buffer 
 		}
+
+		// R_TessMarkMeshList
+		utils::hook::nop(0x6460F3, 5); // R_SetLightmap
+		utils::hook::nop(0x646174, 5); // R_SetSampler - reflectionProbe
+		utils::hook::nop(0x645FB9, 5); // R_SetStreamSource
+		utils::hook(0x645F73, R_TessMarkMeshList_begin_stub, HOOK_JUMP).install()->quick();
 	}
 }
