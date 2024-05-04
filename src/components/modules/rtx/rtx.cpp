@@ -713,11 +713,18 @@ namespace components
 				dpvsGlob->viewPlane.coeffs[3] += rtx::m_frustum_plane_offsets[6]; //5000.0f;
 				// ^ needs to be viewPlane here?
 
+				const auto& var = game::Dvar_FindVar("r_singleCell");
+				const bool single_cell = (var && var->current.enabled) ? true : false;
 
 				// #
 				// always add full cell the player is in (same as r_singlecell)
 				const auto cell = &game::rgp->world->cells[camera_cell_index];
 				const auto cell_index = cell - game::rgp->world->cells;
+
+				if (single_cell)
+				{
+					dpvsGlob->farPlane = nullptr;
+				}
 
 				game::R_AddCellSurfacesAndCullGroupsInFrustumDelayed(cell, dpvs->frustumPlanes, dpvs->frustumPlaneCount, dpvs->frustumPlaneCount); // dpvs->frustumPlaneCount
 				dpvsGlob->cellVisibleBits[(cell_index >> 5) + 3] |= (1 << (cell_index & 0x1F));
@@ -751,7 +758,7 @@ namespace components
 				// #
 				// force cells defined in map_settings.ini
 
-				if (rtx_map_settings::settings()->cell_overrides_exist && camera_cell_index < 1024)
+				if (!single_cell && rtx_map_settings::settings()->cell_overrides_exist && camera_cell_index < 1024)
 				{
 					const auto& c_ow = rtx_map_settings::settings()->cell_settings[camera_cell_index];
 					if (c_ow.active)
@@ -766,8 +773,11 @@ namespace components
 					}
 				}
 
-				// R_VisitPortals
-				game::R_VisitPortals(dpvs->frustumPlaneCount, cell, &dpvsGlob->viewPlane, dpvs->frustumPlanes); // viewplane here .. or is that the nearplane?
+				if (!single_cell)
+				{
+					// R_VisitPortals
+					game::R_VisitPortals(dpvs->frustumPlaneCount, cell, &dpvsGlob->viewPlane, dpvs->frustumPlanes); // viewplane here .. or is that the nearplane?
+				}
 			}
 		}
 
