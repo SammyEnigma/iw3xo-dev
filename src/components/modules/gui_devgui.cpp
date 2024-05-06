@@ -809,12 +809,26 @@ namespace components
 		const auto& cg_fov = game::Dvar_FindVar("cg_fov");
 		const auto& cg_fovScale = game::Dvar_FindVar("cg_fovScale");
 		const auto& cg_gun_x = game::Dvar_FindVar("cg_gun_x");
+		const auto& cg_gun_y = game::Dvar_FindVar("cg_gun_y");
+		const auto& cg_gun_z = game::Dvar_FindVar("cg_gun_z");
 
-		if(cg_fov && cg_fovScale && cg_gun_x)
+		if(cg_fov && cg_fovScale && cg_gun_x && cg_gun_y && cg_gun_z)
 		{
 			ImGui::DragFloat("cg_fov", gui::dvar_get_set<float*>(cg_fov), 0.05f, 65.0f, 80.0f, "%.2f");
 			ImGui::DragFloat("cg_fovScale", gui::dvar_get_set<float*>(cg_fovScale), 0.05f, 0.2f, 2.0f, "%.2f");
-			ImGui::DragFloat("cg_gun_x", gui::dvar_get_set<float*>(cg_gun_x), 0.05f, -30.0f, 30.0f, "%.2f");
+
+			gui::title_inside_seperator("Gun Offsets 'CG_GUN_'", true, 0.0f, true, 2.0f);
+
+			const auto og_width = ImGui::CalcItemWidth();
+			ImGui::PushItemWidth(og_width * 0.275f);
+			ImGui::DragFloat("X##cg_gun_x", gui::dvar_get_set<float*>(cg_gun_x), 0.05f, -30.0f, 30.0f, "%.2f");
+			
+			ImGui::SameLine(og_width * 0.4f);
+			ImGui::DragFloat("Y##cg_gun_y", gui::dvar_get_set<float*>(cg_gun_y), 0.05f, -30.0f, 30.0f, "%.2f");
+
+			ImGui::SameLine(og_width * 0.762f);
+			ImGui::DragFloat("Z##cg_gun_z", gui::dvar_get_set<float*>(cg_gun_z), 0.05f, -30.0f, 30.0f, "%.2f");
+			ImGui::PopItemWidth();
 		}
 		
 		SPACING(0.0f, 4.0f); ImGui::Indent(-8.0f);
