@@ -120,6 +120,14 @@ namespace components
 				ImGui::Checkbox("Show Cell Bounds", &var->current.enabled); TT(var->description);
 			}
 
+			if (const auto var = game::Dvar_FindVar("r_singleCell"); var) {
+				ImGui::Checkbox("Single Cell", &var->current.enabled); TT(var->description);
+			}
+
+			if (const auto var = game::Dvar_FindVar("r_portalWalkLimit"); var) {
+				ImGui::SliderInt("Cell Walk Limit", &var->current.integer, 0, 100); TT(var->description);
+			}
+
 #if DEBUG
 			ImGui::DragInt("D3D Alpha Blend Setting", &rtx_gui::d3d_alpha_blend, 0.025f, 0, 16);
 #endif
