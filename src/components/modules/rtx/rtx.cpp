@@ -1256,6 +1256,7 @@ namespace components
 			utils::hook::nop(0x451C70, 2); // CG_CalcViewValues: always call CG_OffsetFirstPersonView
 			utils::hook::set<BYTE>(0x451C9E, 0xEB); // CG_CalcViewValues: do not call CG_OffsetThirdPersonView
 			utils::hook::set<BYTE>(0x456D36, 0xEB); // CG_AddPlayerWeapon: do not disable bolt effects
+			utils::hook::nop(0x45674A, 2); // DrawBulletImpacts :: calculate impact mark position accounting for gun idle sway
 			utils::hook::nop(0x457054, 6); // CG_AddViewWeapon: do not disable viewmodel
 			utils::hook::nop(0x451D8E, 2); // CG_UpdateThirdPerson: always enable "thirdperson"
 
