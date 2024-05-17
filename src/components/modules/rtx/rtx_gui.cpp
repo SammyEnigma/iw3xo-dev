@@ -16,22 +16,22 @@ namespace components
 			SPACING(0.0f, 4.0f);
 
 			const auto& fx_enable = game::Dvar_FindVar("fx_enable");
-			ImGui::Checkbox("Enable FX", &fx_enable->current.enabled);
+			ImGui::Checkbox("Enable FX", gui::dvar_get_set<bool*>(fx_enable));
 
 			ImGui::SameLine(280, 0);
 			const auto& r_drawdecals = game::Dvar_FindVar("r_drawdecals");
-			ImGui::Checkbox("Enable Decals", &r_drawdecals->current.enabled);
+			ImGui::Checkbox("Enable Decals", gui::dvar_get_set<bool*>(r_drawdecals));
 			TT("Assign material categories 'Decal' and 'Dynamic Decal' to all decal surfaces\n"
 			   "Tip: You can disable 'Stochachstic Alpha Blending' to select decals within the 'world'");
 
 			const auto& rtx_hacks = game::Dvar_FindVar("rtx_hacks");
-			ImGui::Checkbox("Skybox hack", &rtx_hacks->current.enabled);
+			ImGui::Checkbox("Skybox hack", gui::dvar_get_set<bool*>(rtx_hacks));
 			TT("Replaces the skybox with a placeholder texture that can be set as sky.\n"
 			   "It`s recommended to keep this enabled!");
 
 			ImGui::SameLine(280, 0);
 			const auto& rtx_extend_smodel_drawing = game::Dvar_FindVar("rtx_extend_smodel_drawing");
-			ImGui::Checkbox("Increase static model limit", &rtx_extend_smodel_drawing->current.enabled);
+			ImGui::Checkbox("Increase static model limit", gui::dvar_get_set<bool*>(rtx_extend_smodel_drawing));
 			TT("The game has a hard limit on how many static models it can draw at once (warning print in console).\n"
 			   "Enabling this setting will disable that limit but might cause instability.");
 
@@ -48,7 +48,7 @@ namespace components
 			if (dvars::r_showTessDist) {
 				ImGui::SameLine(280, 0);
 				ImGui::PushItemWidth(140.0f);
-				ImGui::SliderFloat("Distance", &dvars::r_showTessDist->current.value, 1.0f, 1000.0f, "%.0f"); TT(dvars::r_showTessDist->description);
+				ImGui::SliderFloat("Distance", gui::dvar_get_set<float*>(dvars::r_showTessDist), 1.0f, 1000.0f, "%.0f"); TT(dvars::r_showTessDist->description);
 				ImGui::PopItemWidth();
 			}
 
@@ -58,32 +58,32 @@ namespace components
 			if (rtx::OLD_CULLING_ACTIVE)
 			{
 				if (dvars::rtx_disable_entity_culling) {
-					ImGui::Checkbox("Disable Entity Culling", &dvars::rtx_disable_entity_culling->current.enabled);TT(dvars::rtx_disable_entity_culling->description);
+					ImGui::Checkbox("Disable Entity Culling", gui::dvar_get_set<bool*>(dvars::rtx_disable_entity_culling));TT(dvars::rtx_disable_entity_culling->description);
 				}
 
 				if (dvars::rtx_disable_world_culling) {
-					ImGui::SliderInt("World Culling", &dvars::rtx_disable_world_culling->current.integer, 0, 3,
+					ImGui::SliderInt("World Culling", gui::dvar_get_set<int*>(dvars::rtx_disable_world_culling), 0, 3,
 						rtx::rtx_disable_world_culling_enum[dvars::rtx_disable_world_culling->current.integer]); TT(dvars::rtx_disable_world_culling->description);
 				}
 			}
 			else
 			{
 				if (dvars::rtx_culling_tweak_mins) {
-					ImGui::Checkbox("Tweak Culling (Mins)", &dvars::rtx_culling_tweak_mins->current.enabled); TT(dvars::rtx_culling_tweak_mins->description);
+					ImGui::Checkbox("Tweak Culling (Mins)", gui::dvar_get_set<bool*>(dvars::rtx_culling_tweak_mins)); TT(dvars::rtx_culling_tweak_mins->description);
 				}
 
 				ImGui::SameLine(280, 0);
 				if (dvars::rtx_culling_tweak_maxs) {
-					ImGui::Checkbox("Tweak Culling (Maxs)", &dvars::rtx_culling_tweak_maxs->current.enabled); TT(dvars::rtx_culling_tweak_maxs->description);
+					ImGui::Checkbox("Tweak Culling (Maxs)", gui::dvar_get_set<bool*>(dvars::rtx_culling_tweak_maxs)); TT(dvars::rtx_culling_tweak_maxs->description);
 				}
 
 				if (dvars::rtx_culling_tweak_frustum) {
-					ImGui::Checkbox("Tweak Culling (Frustum)", &dvars::rtx_culling_tweak_frustum->current.enabled); TT(dvars::rtx_culling_tweak_frustum->description);
+					ImGui::Checkbox("Tweak Culling (Frustum)", gui::dvar_get_set<bool*>(dvars::rtx_culling_tweak_frustum)); TT(dvars::rtx_culling_tweak_frustum->description);
 				}
 
 				ImGui::SameLine(280, 0);
 				if (dvars::rtx_culling_tweak_smodel) {
-					ImGui::Checkbox("Tweak Culling (Static Models)", &dvars::rtx_culling_tweak_smodel->current.enabled); TT(dvars::rtx_culling_tweak_smodel->description);
+					ImGui::Checkbox("Tweak Culling (Static Models)", gui::dvar_get_set<bool*>(dvars::rtx_culling_tweak_smodel)); TT(dvars::rtx_culling_tweak_smodel->description);
 				}
 
 				SPACING(0.0f, 4.0f);
@@ -91,7 +91,7 @@ namespace components
 				{
 					if (dvars::rtx_culling_plane_dist)
 					{
-						if (ImGui::DragFloat("Plane Distance Setter", &dvars::rtx_culling_plane_dist->current.value, 0.2f, -50000.0f, 50000.0f, "%.0f"))
+						if (ImGui::DragFloat("Plane Distance Setter", gui::dvar_get_set<float*>(dvars::rtx_culling_plane_dist), 0.2f, -50000.0f, 50000.0f, "%.0f"))
 						{
 							for (auto& plane : rtx::m_frustum_plane_offsets)
 							{
@@ -112,7 +112,7 @@ namespace components
 			gui::title_inside_seperator("Dev Settings", true, 0.0f, true, 2.0f);
 
 			if (dvars::r_showCellIndex) {
-				ImGui::Checkbox("Show Cell Indices", &dvars::r_showCellIndex->current.enabled); TT(dvars::r_showCellIndex->description);
+				ImGui::Checkbox("Show Cell Indices", gui::dvar_get_set<bool*>(dvars::r_showCellIndex)); TT(dvars::r_showCellIndex->description);
 			}
 
 			if (const auto var = game::Dvar_FindVar("r_showPortals"); var) {
@@ -124,8 +124,20 @@ namespace components
 				ImGui::Checkbox("Single Cell", &var->current.enabled); TT(var->description);
 			}
 
+			if (const auto var = game::Dvar_FindVar("r_lockPvs"); var) 
+			{
+				ImGui::SameLine(280, 0);
+				if (ImGui::Checkbox("Lock Frustum Culling (PVS)", &var->current.enabled))
+				{
+					// game logic is using modified flag to update the pvs
+					// only "modify" dvar upon actually clicking the checkbox
+					var->modified = true;
+					var->latched.enabled = var->current.enabled;
+				} TT(var->description);
+			}
+
 			if (const auto var = game::Dvar_FindVar("r_portalWalkLimit"); var) {
-				ImGui::SliderInt("Cell Walk Limit", &var->current.integer, 0, 100); TT(var->description);
+				ImGui::SliderInt("Cell Walk Limit", gui::dvar_get_set<int*>(var), 0, 100); TT(var->description);
 			}
 
 #if DEBUG
@@ -215,7 +227,7 @@ namespace components
 					if (dvars::rtx_sky_follow_player)
 					{
 						ImGui::SameLine(180, 0.0f);
-						ImGui::Checkbox("Follow player ", &dvars::rtx_sky_follow_player->current.enabled);
+						ImGui::Checkbox("Follow player ", gui::dvar_get_set<bool*>(dvars::rtx_sky_follow_player));
 					}
 				}
 				gui::center_horz_end(skygroup_settings01_width);
@@ -252,11 +264,8 @@ namespace components
 			{
 				if (ImGui::CollapsingHeader("Additional Sky Marking"))
 				{
-					if (ImGui::Checkbox("Enable Additional Sky Marking", &dvars::rtx_sky_hacks->current.enabled))
-					{
-						dvars::rtx_sky_hacks->latched.enabled = dvars::rtx_sky_hacks->current.enabled;
-						dvars::rtx_sky_hacks->modified = true;
-					} TT("This can be used to tell iw3xo about any custom skies it might not have picked up for replacement");
+					ImGui::Checkbox("Enable Additional Sky Marking", gui::dvar_get_set<bool*>(dvars::rtx_sky_hacks));
+						TT("This can be used to tell iw3xo about any custom skies it might not have picked up for replacement");
 
 					if (dvars::rtx_sky_hacks->current.enabled)
 					{
@@ -265,7 +274,6 @@ namespace components
 						ImGui::Text("Map Material List");
 						ImGui::InputTextMultiline("##map_mat_list", (char*)map_materials.c_str(), map_materials.size(), ImVec2(ImGui::GetWindowWidth() - 54.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_ReadOnly);
 
-						
 						if (ImGui::Button("Refresh List", ImVec2(ImGui::GetWindowWidth() - 54.0f, 30.0f)) || map_materials.empty())
 						{
 							map_materials_update();
@@ -504,17 +512,17 @@ namespace components
 			const auto& r_lodBiasRigid = game::Dvar_FindVar("r_lodBiasRigid");
 			const auto& r_lodScaleSkinned = game::Dvar_FindVar("r_lodScaleSkinned");
 			const auto& r_lodBiasSkinned = game::Dvar_FindVar("r_lodBiasSkinned");
-			ImGui::SliderFloat("r_lodScaleRigid", &r_lodScaleRigid->current.value, 0.0f, 8.0f);
-			ImGui::DragFloat("r_lodBiasRigid", &r_lodBiasRigid->current.value, 0.1f);
-			ImGui::SliderFloat("r_lodScaleSkinned", &r_lodScaleSkinned->current.value, 0.0f, 8.0f);
-			ImGui::DragFloat("r_lodBiasSkinned", &r_lodBiasSkinned->current.value, 0.1f);
+			ImGui::SliderFloat("r_lodScaleRigid", gui::dvar_get_set<float*>(r_lodScaleRigid), 0.0f, 8.0f);
+			ImGui::DragFloat("r_lodBiasRigid", gui::dvar_get_set<float*>(r_lodBiasRigid), 0.1f);
+			ImGui::SliderFloat("r_lodScaleSkinned", gui::dvar_get_set<float*>(r_lodScaleSkinned), 0.0f, 8.0f);
+			ImGui::DragFloat("r_lodBiasSkinned", gui::dvar_get_set<float*>(r_lodBiasSkinned), 0.1f);
 
 			//
 
 			const auto& r_forceLod = game::Dvar_FindVar("r_forceLod");
 			const char* force_lod_strings[] = { "High", "Medium", "Low", "Lowest", "None" };
-			ImGui::SliderInt("Force LOD", &r_forceLod->current.integer, 0, 4, force_lod_strings[r_forceLod->current.integer]);
-			ImGui::Checkbox("Force second lowest LOD", &dvars::r_forceLod_second_lowest->current.enabled); TT(dvars::r_forceLod_second_lowest->description);
+			ImGui::SliderInt("Force LOD", gui::dvar_get_set<int*>(r_forceLod), 0, 4, force_lod_strings[r_forceLod->current.integer]);
+			ImGui::Checkbox("Force second lowest LOD", gui::dvar_get_set<bool*>(dvars::r_forceLod_second_lowest)); TT(dvars::r_forceLod_second_lowest->description);
 
 			// no longer used
 			//const auto& r_highLodDist = game::Dvar_FindVar("r_highLodDist");
@@ -536,7 +544,7 @@ namespace components
 				static game::FxEffect* marker_test = nullptr;
 				if (ImGui::Button("Spawn Marker FX"))
 				{
-					if (const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, "rtx/markers/rtx_marker_backlot_01").fx; fx)
+					if (const auto fx = game::DB_FindXAssetHeader(game::XAssetType::ASSET_TYPE_FX, "rtx/markers/rtx_marker_00").fx; fx)
 					{
 						marker_test = game::FX_SpawnOrientedEffect(game::IDENTITY_AXIS[0], fx, 0, game::vec3_origin);
 					}

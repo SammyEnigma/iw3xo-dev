@@ -1381,7 +1381,7 @@ namespace components
 			dvars::rtx_culling_tweak_mins = game::Dvar_RegisterBool(
 				/* name		*/ "rtx_culling_tweak_mins",
 				/* desc		*/ "Disable dpvs mins check (reduces culling)",
-				/* default	*/ true,
+				/* default	*/ false,
 				/* flags	*/ game::dvar_flags::saved);
 
 			dvars::rtx_culling_tweak_maxs = game::Dvar_RegisterBool(
@@ -1393,7 +1393,7 @@ namespace components
 			dvars::rtx_culling_tweak_frustum = game::Dvar_RegisterBool(
 				/* name		*/ "rtx_culling_tweak_frustum",
 				/* desc		*/ "Disable (most) frustum culling (reduces culling)",
-				/* default	*/ false,
+				/* default	*/ true,
 				/* flags	*/ game::dvar_flags::saved);
 
 			dvars::rtx_culling_tweak_smodel = game::Dvar_RegisterBool(
@@ -1408,7 +1408,7 @@ namespace components
 				/* default	*/ 1250.0f,
 				/* minVal	*/ -50000.0f,
 				/* maxVal	*/ 50000.0f,
-				/* flags	*/ game::dvar_flags::none);
+				/* flags	*/ game::dvar_flags::saved);
 
 
 			// never cull brushmodels via dpvs
