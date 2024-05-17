@@ -182,6 +182,7 @@ namespace dvars
 
 	extern game::dvar_s* cg_fov_gun;
 	extern game::dvar_s* cg_fov_tweaks;
+	extern game::dvar_s* bg_bobIdle;
 
 	// Debug collision
 	extern game::dvar_s* r_drawCollision;

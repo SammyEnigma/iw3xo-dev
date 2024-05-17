@@ -109,10 +109,32 @@ namespace components
 		}
 	}
 
+	__declspec(naked) void gun_idle_sway_stub()
+	{
+		const static uint32_t func_addr = 0x41AEB0;
+		const static uint32_t retn_addr = 0x41B802;
+		__asm
+		{
+			// jump if sway is disabled
+			push	eax;
+			mov		eax, dvars::bg_bobIdle;
+			cmp		byte ptr[eax + 12], 0;
+			pop		eax;
+			je		SKIP;
+			call	func_addr;
+
+		SKIP:
+			jmp		retn_addr;
+		}
+	}
+
 	_cg::_cg()
 	{
 		// hook call to CG_Drawcrosshair in CG_Draw2D ~ only active if cg_draw2d
 		utils::hook(0x42F6B5, draw_custom_hud_stub, HOOK_JUMP).install()->quick();
+
+		// enable/disable gun idle sway via dvar (useful for acog)
+		utils::hook(0x41B7FD, gun_idle_sway_stub, HOOK_JUMP).install()->quick();
 
 		// -----
 		// dvars
@@ -164,6 +186,12 @@ namespace components
 			/* w		*/ 1.0f,
 			/* minValue	*/ 0.0f,
 			/* maxValue	*/ 1.0f,
+			/* flags	*/ game::dvar_flags::saved);
+
+		dvars::bg_bobIdle = game::Dvar_RegisterBool(
+			/* name		*/ "bg_bobIdle",
+			/* desc		*/ "Weapon idle sway",
+			/* default	*/ false,
 			/* flags	*/ game::dvar_flags::saved);
 	}
 }

@@ -803,8 +803,9 @@ namespace components
 
 		ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 
-		ImGui::Checkbox("Tweak Gun FOV", gui::dvar_get_set<bool*>(dvars::cg_fov_tweaks));
-		ImGui::DragFloat("Gun FOV", gui::dvar_get_set<float*>(dvars::cg_fov_gun), 0.05f, 20.0f, 160.0f, "%.2f");
+		ImGui::Checkbox("Gun Idle Sway", gui::dvar_get_set<bool*>(dvars::bg_bobIdle)); TT(dvars::bg_bobIdle->description);
+		ImGui::Checkbox("Tweak Gun FOV", gui::dvar_get_set<bool*>(dvars::cg_fov_tweaks)); TT(dvars::cg_fov_tweaks->description);
+		ImGui::DragFloat("Gun FOV", gui::dvar_get_set<float*>(dvars::cg_fov_gun), 0.05f, 20.0f, 160.0f, "%.2f"); TT(dvars::cg_fov_gun->description);
 
 		const auto& cg_fov = game::Dvar_FindVar("cg_fov");
 		const auto& cg_fovScale = game::Dvar_FindVar("cg_fovScale");
