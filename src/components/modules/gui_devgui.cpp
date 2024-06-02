@@ -690,7 +690,7 @@ namespace components
 				cfg << "set r_filmTweakBrightness " << r_filmTweakBrightness->current.value << std::endl;
 
 				float unpacked_color[4] = {};
-				game::Byte4UnpackRgba((unsigned __int8*)&r_lightTweakSunColor->current, unpacked_color);
+				game::Byte4UnpackRgba(r_lightTweakSunColor->current.color, unpacked_color);
 
 				cfg << "set r_lightTweakSunColor " << unpacked_color[0] << " " << unpacked_color[1] << " " << unpacked_color[2] << std::endl;
 				cfg << "set r_lightTweakSunDirection " << r_lightTweakSunDirection->current.vector[0] << " " << r_lightTweakSunDirection->current.vector[1] << " " << r_lightTweakSunDirection->current.vector[2] << std::endl;

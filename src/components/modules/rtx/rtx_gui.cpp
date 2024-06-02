@@ -143,6 +143,11 @@ namespace components
 #if DEBUG
 			ImGui::DragInt("D3D Alpha Blend Setting", &rtx_gui::d3d_alpha_blend, 0.025f, 0, 16);
 #endif
+			if (dvars::rtx_fx_alpha_scalar)
+			{
+				ImGui::SliderFloat("FX Alpha Scalar", gui::dvar_get_set<float*>(dvars::rtx_fx_alpha_scalar), dvars::rtx_fx_alpha_scalar->domain.value.min, dvars::rtx_fx_alpha_scalar->domain.value.max, "%.2f");
+				TT(dvars::rtx_fx_alpha_scalar->description);
+			}
 
 			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}

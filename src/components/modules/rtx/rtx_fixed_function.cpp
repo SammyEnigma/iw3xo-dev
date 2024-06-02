@@ -1344,7 +1344,21 @@ namespace components
 				v->pos[2] = src_vert->xyz[2];
 
 				// packed vertex color : used for color and alpha manip.
-				v->color = src_vert->color.packed;
+				//v->color = src_vert->color.packed;
+
+				auto alpha_scalar = 0.6f;
+				if (dvars::rtx_fx_alpha_scalar)
+				{
+					alpha_scalar = dvars::rtx_fx_alpha_scalar->current.value;
+				}
+
+				game::GfxColor packed_color = {};
+				const auto alpha_val = static_cast<float>((double)src_vert->color.array[3] * 0.003921568859368563) * alpha_scalar;
+				packed_color.array[3] = game::Byte1PackClamp(alpha_val);
+				packed_color.array[0] = src_vert->color.array[0];
+				packed_color.array[1] = src_vert->color.array[1];
+				packed_color.array[2] = src_vert->color.array[2];
+				v->color = packed_color.packed;
 
 				// uv's
 				game::Vec2UnpackTexCoords(src_vert->texCoord.packed, v->texcoord);
@@ -1719,6 +1733,14 @@ namespace components
 			/* name		*/ "rtx_warm_smodels",
 			/* desc		*/ "Build static model vertex buffers on map load (fixed-function rendering only)",
 			/* default	*/ true,
+			/* flags	*/ game::dvar_flags::saved);
+
+		dvars::rtx_fx_alpha_scalar = game::Dvar_RegisterFloat(
+			/* name		*/ "rtx_fx_alpha_scalar",
+			/* desc		*/ "Global Effect Alpha Scalar",
+			/* default	*/ 0.5f,
+			/* minVal	*/ 0.0f,
+			/* maxVal	*/ 2.0f,
 			/* flags	*/ game::dvar_flags::saved);
 
 #if DEBUG

@@ -600,7 +600,7 @@ namespace game
 	void Vec3UnpackUnitVec(unsigned int packed, float* texcoord_out /*ecx*/);
 	void Vec2UnpackTexCoords(unsigned int packed, float* texcoord_out /*ecx*/);
 
-	void Byte4UnpackRgba(unsigned __int8* from, float* to);
+	void Byte4UnpackRgba(const char* from, float* to);
 	char Byte1PackClamp(const float from);
 	void Byte4PackRgba(const float* from, char* to);
 	void Byte4PackPixelColor(const float* from, char* to);

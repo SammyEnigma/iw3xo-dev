@@ -1645,7 +1645,7 @@ namespace game
 	}
 
 
-	void Byte4UnpackRgba(unsigned __int8* from, float* to)
+	void Byte4UnpackRgba(const char* from, float* to)
 	{
 		if (from && to)
 		{
