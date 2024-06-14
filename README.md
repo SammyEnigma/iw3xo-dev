@@ -6,19 +6,7 @@
 This client mod brings various modifications and additions to the base game  
 and also includes support for nvidia's [RTX Remix](https://github.com/NVIDIAGameWorks/rtx-remix).  
 
-__[ Most noteworthy features of iw3xo ]__  
-map exporting -- live link between the game and radiant -- sp map loading in mp --   
-collision visualization -- day and night cycle with custom sky shader --     
-custom movement options and much more
-
-__[ Remix compatibility ]__   
-This client mod does __not__ come with a 'rtx mod' -> that means:  
-no custom models, no normal-maps, no fancy pbr materials or lights. 
-
-</div>
-
 <br>
-<div align="center" markdown="1">
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/xoxor4d/iw3xo-dev?color=%2368BC71&logo=github)](https://github.com/xoxor4d/iw3xo-dev/releases)&ensp;
 [![build-release](https://img.shields.io/github/actions/workflow/status/xoxor4d/iw3xo-dev/build-release.yml?branch=develop&label=nightly-dev&logo=github)](https://nightly.link/xoxor4d/iw3xo-dev/workflows/build-release/develop/Release-binaries.zip)&ensp;
@@ -26,11 +14,30 @@ no custom models, no normal-maps, no fancy pbr materials or lights.
 [![Downloads](https://img.shields.io/github/downloads/xoxor4d/iw3xo-dev/total?logo=github&label=total-downloads)](https://github.com/xoxor4d/iw3xo-dev/releases)&ensp;
 [![Discord](https://img.shields.io/discord/677574256678141973?label=Discord&logo=discord&logoColor=%23FFFF&)](https://discord.gg/t5jRGbj)&ensp;
 
-<img src="https://raw.githubusercontent.com/xoxor4d/xoxor4d.github.io/master/assets/img/daynight/small_gif.gif"/>
-
-</div>
 <br>
 
+__[ Most noteworthy features of iw3xo ]__  
+map exporting -- live link between the game and radiant -- sp map loading in mp --   
+collision visualization -- day and night cycle with custom sky shader --     
+custom movement options and much more
+
+<img src="https://raw.githubusercontent.com/xoxor4d/xoxor4d.github.io/master/assets/img/daynight/small_gif.gif"/>
+
+<br>
+
+__[ Remix compatibility ]__   
+tweak sunlight, fog and skybox per map -- spawning of unique anchor meshes to attach new prims --  
+remix friendly culling and the ability to override culling per portal --  
+3D is fully rendered with fixed-function
+
+</div>
+
+<br>
+<div align="center" markdown="1">
+
+
+
+</div>
 <div align="center" markdown="1">
 
 ![img](assets/img/01.jpg)
@@ -83,11 +90,19 @@ or directly run `iw3xo.exe`
 
 
 # Remix section
-🔸 sun, skybox and fog settings can be tweaked by using `map_settings.ini` :: `iw3xo/rtx` folder 🔸
-- use console command `/devgui` to open a developer gui -> __RTX__ tab
-  - I suggest binding the `/devgui` command to a key, eg: `bind F5 devgui`
+
+<div align="center" markdown="1">
+🔷 To clarify, this client mod is only making CoD4 compatible with remix. 🔷   
+
+🔷 It does _not_ enhance materials or meshes 🔷  
+
+My actual remix-mod with enhanced materials, meshes and lights can be found over at ModDB: (soon)
+</div>
 
 <br>
+
+- Use console command `/devgui` to open a developer gui -> __RTX__ tab
+  > I suggest binding the `/devgui` command to a key, eg: `/bind F5 devgui`
 
 - A. Commandline Arguments:  
 
@@ -99,7 +114,7 @@ or directly run `iw3xo.exe`
   - `-old_anti_culling` :: use the old anti culling system
   - `-no_forced_lod` :: do not set `r_forceLod` to `high` by default  
   - `-load_normal_spec` :: enable loading of specular and normal maps (if you need to for some reason)
-  - `-no_playershadow` :: disable player shadow casting (required to get thirdperson to work)   
+  - `-no_playershadow` :: disable player shadow casting   
 
 > - commandline example: &ensp;`c:\path\iw3xo.exe -rtx -no_default_sky -stock_effects` 
 
@@ -116,7 +131,8 @@ or directly run `iw3xo.exe`
 	🟩 `rtx_culling_tweak_maxs` :: prevents a lot of culling  
 	🟩 `rtx_culling_tweak_frustum` :: disables frustum culling  
 	🟩 `rtx_culling_tweak_smodel` :: disables static model culling  
-	🟩 `rtx_culling_plane_dist` :: distance of frustum culling planes
+	🟩 `rtx_culling_plane_dist` :: distance of frustum culling planes  
+	🟩 `rtx_fx_cull_elem_draw_radius` :: fx elements inside this radius around the player are not culled
 
 	#### General dvars:
 	🟩 `r_forceLod` :: force all models to a specific LOD  
@@ -127,13 +143,14 @@ or directly run `iw3xo.exe`
 	🟩 `r_showCellIndex` :: show portal index info (useful for manual culling overrides via map settings)  
 	🟩 `r_showModelNames` :: draw names of static models around the player  
 	🟦 `rtx_sky_hacks` :: allows manually declaring textures as sky (maps w. multiple skies)  
-	🟦 `rtx_sky_materials` :: materials iw3xo flags as 'sky' materials (logic that replaces the default sky)
+	🟦 `rtx_sky_materials` :: materials that iw3xo flags as 'sky' materials (logic that replaces the default sky)
 
 	#### Dvars that should only be changed if you know what you are doing:
-	🟧 `rtx_warm_smodels` :: build model buffers on map load (enabled by default)  
+	🟧 `rtx_warm_smodels` :: build model vertex buffers on map load (enabled by default)  
 	🟧 `rtx_hacks` :: replace the skybox with a blue-gray texture  
 	🟧 `rtx_extend_smodel_drawing` :: disable static model draw limit (max amount of static models drawn at once)  
-	🟧 `rtx_sky_follow_player` :: sky will follow the player (might help with culling in some cases)
+	🟧 `rtx_sky_follow_player` :: sky will follow the player (helps with culling)  
+	🟧 `rtx_fx_alpha_scalar` :: global fx alpha scalar
 
 	#### Culling dvars when `old_anti_culling` flag is set:
 	🟩 `rtx_disable_world_culling` :: tweak overall culling  
@@ -144,6 +161,13 @@ or directly run `iw3xo.exe`
 - C. Console Commands :
 	- `mapsettings_update` :: reload map settings
 	- `mapsettings_get_defaults` :: prints sun direction, color and intensity in map_settings format based on the stock map settings to the consle
+
+
+#### map_settings.ini :: `root/iw3xo/rtx` 
+
+🔸 Tweak sunlight / color, skybox and fog settings   
+🔸 Override culling per portal / cell (to fix light or shadow culling - dvar `r_showCellIndex`)   
+🔸 Spawn unique anchor meshes that can be used to attach unique prims and lights to  
 
 <br>
 
