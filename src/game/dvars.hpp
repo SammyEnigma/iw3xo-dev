@@ -168,6 +168,7 @@ namespace dvars
 	extern game::dvar_s* rtx_culling_tweak_smodel;
 	extern game::dvar_s* rtx_culling_plane_dist;
 	extern game::dvar_s* rtx_fx_alpha_scalar;
+	extern game::dvar_s* rtx_fx_cull_elem_draw_radius;
 
 	extern game::dvar_s* r_showTess;
 	extern game::dvar_s* r_showTessSkin;

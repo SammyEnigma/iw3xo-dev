@@ -149,12 +149,66 @@ namespace components
 				TT(dvars::rtx_fx_alpha_scalar->description);
 			}
 
+			if (dvars::rtx_fx_cull_elem_draw_radius)
+			{
+				ImGui::SliderFloat("FX Cull Radius", gui::dvar_get_set<float*>(dvars::rtx_fx_cull_elem_draw_radius), dvars::rtx_fx_cull_elem_draw_radius->domain.value.min, dvars::rtx_fx_cull_elem_draw_radius->domain.value.max, "%.2f");
+				TT(dvars::rtx_fx_cull_elem_draw_radius->description);
+			}
+
 			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
-		if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_None)) //ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
+
+			if (dvars::rtx_sky_hacks)
+			{
+				if (ImGui::CollapsingHeader("Additional Sky Marking"))
+				{
+					ImGui::Checkbox("Enable Additional Sky Marking", gui::dvar_get_set<bool*>(dvars::rtx_sky_hacks));
+					TT("This can be used to tell iw3xo about any custom skies it might not have picked up for replacement");
+
+					if (dvars::rtx_sky_hacks->current.enabled)
+					{
+						SPACING(0.0f, 4.0f);
+
+						ImGui::Text("Map Material List");
+						ImGui::InputTextMultiline("##map_mat_list", (char*)map_materials.c_str(), map_materials.size(), ImVec2(ImGui::GetWindowWidth() - 54.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_ReadOnly);
+
+						if (ImGui::Button("Refresh List", ImVec2(ImGui::GetWindowWidth() - 54.0f, 30.0f)) || map_materials.empty())
+						{
+							map_materials_update();
+						}
+
+						SPACING(0.0f, 4.0f);
+
+						if (dvars::rtx_sky_materials)
+						{
+							static char edit_buffer[1024] = {};
+							static bool edit_buffer_update = *dvars::rtx_sky_materials->current.string;
+							static bool edit_buffer_update_init = false;
+
+							ImGui::Text("Sky Materials (editable). Format <string string string ...>");
+							ImGui::InputTextMultiline("##edit_mats", edit_buffer, IM_ARRAYSIZE(edit_buffer), ImVec2(ImGui::GetWindowWidth() - 54.0f, ImGui::GetTextLineHeight() * 3));
+
+							if ((ImGui::Button("Refresh") && edit_buffer_update) || (!edit_buffer_update_init && edit_buffer_update))
+							{
+								edit_buffer_update_init = true;
+								memset(&edit_buffer, 0, IM_ARRAYSIZE(edit_buffer));
+								memcpy(&edit_buffer, dvars::rtx_sky_materials->current.string, strlen(dvars::rtx_sky_materials->current.string));
+							}
+
+							ImGui::SameLine();
+							if (ImGui::Button("Apply"))
+							{
+								CMDEXEC(utils::va("set rtx_sky_materials %s", edit_buffer));
+								rtx::sky_material_update(edit_buffer);
+							}
+						}
+					}
+				}
+			}
 
 			const auto sky_valid = skysphere_is_valid();
 			constexpr auto BUTTON_WIDTH = 124.0f;
@@ -263,56 +317,6 @@ namespace components
 				}
 			}
 
-			SPACING(0.0f, 4.0f);
-
-			if (dvars::rtx_sky_hacks)
-			{
-				if (ImGui::CollapsingHeader("Additional Sky Marking"))
-				{
-					ImGui::Checkbox("Enable Additional Sky Marking", gui::dvar_get_set<bool*>(dvars::rtx_sky_hacks));
-						TT("This can be used to tell iw3xo about any custom skies it might not have picked up for replacement");
-
-					if (dvars::rtx_sky_hacks->current.enabled)
-					{
-						SPACING(0.0f, 4.0f);
-
-						ImGui::Text("Map Material List");
-						ImGui::InputTextMultiline("##map_mat_list", (char*)map_materials.c_str(), map_materials.size(), ImVec2(ImGui::GetWindowWidth() - 54.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_ReadOnly);
-
-						if (ImGui::Button("Refresh List", ImVec2(ImGui::GetWindowWidth() - 54.0f, 30.0f)) || map_materials.empty())
-						{
-							map_materials_update();
-						}
-
-						SPACING(0.0f, 4.0f);
-
-						if (dvars::rtx_sky_materials)
-						{
-							static char edit_buffer[1024] = {};
-							static bool edit_buffer_update = *dvars::rtx_sky_materials->current.string;
-							static bool edit_buffer_update_init = false;
-
-							ImGui::Text("Sky Materials (editable). Format <string string string ...>");
-							ImGui::InputTextMultiline("##edit_mats", edit_buffer, IM_ARRAYSIZE(edit_buffer), ImVec2(ImGui::GetWindowWidth() - 54.0f, ImGui::GetTextLineHeight() * 3));
-
-							if ((ImGui::Button("Refresh") && edit_buffer_update) || (!edit_buffer_update_init && edit_buffer_update))
-							{
-								edit_buffer_update_init = true;
-								memset(&edit_buffer, 0, IM_ARRAYSIZE(edit_buffer));
-								memcpy(&edit_buffer, dvars::rtx_sky_materials->current.string, strlen(dvars::rtx_sky_materials->current.string));
-							}
-
-							ImGui::SameLine();
-							if (ImGui::Button("Apply"))
-							{
-								CMDEXEC(utils::va("set rtx_sky_materials %s", edit_buffer));
-								rtx::sky_material_update(edit_buffer);
-							}
-						}
-					}
-				}
-			}
-
 			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
@@ -332,8 +336,8 @@ namespace components
 					{
 						on_edit = true;
 
-						// default light settings (spawn on player when untouched)
-						if (rtx_lights::rtx_debug_lights[i].virgin)
+						// default light settings (spawn on player when untouched - not first light (sun))
+						if (i && rtx_lights::rtx_debug_lights[i].virgin)
 						{
 							rtx_lights::rtx_debug_lights[i].color_scale = 3.0f;
 							rtx_lights::rtx_debug_lights[i].range = 500.0f;
@@ -455,7 +459,12 @@ namespace components
 						}
 
 						on_edit = ImGui::ColorEdit3("Color", rtx_lights::rtx_debug_lights[i].color, ImGuiColorEditFlags_RGB) ? true : on_edit;
-						on_edit = ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.005f, 0.0f) ? true : on_edit;
+
+						if (ImGui::DragFloat("Color Scale", &rtx_lights::rtx_debug_lights[i].color_scale, 0.001f, 0.0f))
+						{
+							rtx_lights::rtx_debug_lights[i].color_scale = rtx_lights::rtx_debug_lights[i].color_scale < 0.0f ? 0.0f : rtx_lights::rtx_debug_lights[i].color_scale;
+							on_edit = true;
+						}
 
 						if (rtx_lights::rtx_debug_lights[i].type != D3DLIGHT_DIRECTIONAL)
 						{
@@ -509,7 +518,7 @@ namespace components
 			ImGui::Indent(-8.0f); SPACING(0.0f, 12.0f);
 		}
 
-		if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+		if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_None))
 		{
 			ImGui::Indent(8.0f); SPACING(0.0f, 4.0f);
 

@@ -61,7 +61,7 @@ namespace components
 		if (!flags::has_flag("no_sun"))
 		{
 			// only set sun if debuglight 0 is not active
-			if (const auto l0 = &rtx_lights::rtx_debug_lights[0]; !l0->enable)
+			if (auto l0 = &rtx_lights::rtx_debug_lights[0]; !l0->enable)
 			{
 				const auto s = rtx_map_settings::settings();
 
@@ -1027,6 +1027,60 @@ namespace components
 
 
 	// *
+	// fx
+	
+	// returns true if inside radius
+	int fx_cullsphere_radius_check(const float* camera_pos, const float* fx_world_pos)
+	{
+		if (const auto var = game::Dvar_FindVar("fx_cull_elem_draw");
+			var && var->current.enabled)
+		{
+			const auto dist = utils::vector::distance3(fx_world_pos, camera_pos);
+
+			if (dvars::rtx_fx_cull_elem_draw_radius &&
+				dist < dvars::rtx_fx_cull_elem_draw_radius->current.value)
+			{
+				return 1;
+			}
+		}
+
+		return 0;
+	}
+
+	int fx_cullsphere_global_helper = 0;
+	__declspec(naked) void fx_cullsphere_stub()
+	{
+		const static uint32_t og_continue_addr = 0x4A6297;
+		const static uint32_t og_retn_addr = 0x4A62DE;
+		__asm
+		{
+			pushad;
+			push	edi;					// float* fx worldpos
+			push	ecx;					// FxCamera*
+			call	fx_cullsphere_radius_check;
+			add		esp, 8;
+			mov		fx_cullsphere_global_helper, eax;
+			popad;
+			xor		eax, eax;
+
+			cmp		fx_cullsphere_global_helper, 1;
+
+			push    ecx;
+			je		loc_4A62DE;				// do not cull if within radius
+
+			// OG_LOGIC
+			xor		edx, edx;
+			test    esi, esi;
+			jbe		loc_4A62DE;
+			jmp		og_continue_addr;
+
+		loc_4A62DE:
+			jmp		og_retn_addr;
+		}
+	}
+
+
+	// *
 	// dvars
 
 	void rtx::force_dvars_on_frame()
@@ -1456,6 +1510,13 @@ namespace components
 
 
 		// *
+		// fx
+
+		// hook FX_CullSphere to implement an additional radius check
+		utils::hook(0x4A6290, fx_cullsphere_stub, HOOK_JUMP).install()->quick();
+
+
+		// *
 		// dvars
 
 		// stub after 'R_RegisterDvars' to re-register stock dvars
@@ -1521,6 +1582,14 @@ namespace components
 			/* desc		*/ "draw cell index at the center of current cell (useful for map_settings)",
 			/* default	*/ false,
 			/* flags	*/ game::dvar_flags::none);
+
+		dvars::rtx_fx_cull_elem_draw_radius = game::Dvar_RegisterFloat(
+			/* name		*/ "rtx_fx_cull_elem_draw_radius",
+			/* desc		*/ "fx elements inside this radius are not affected by culling (fx_cull_elem_draw)",
+			/* default	*/ 1200.0f,
+			/* min		*/ 0.0f,
+			/* max		*/ 10000.0f,
+			/* flags	*/ game::dvar_flags::saved);
 
 
 #if DEBUG

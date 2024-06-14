@@ -1738,7 +1738,7 @@ namespace components
 		dvars::rtx_fx_alpha_scalar = game::Dvar_RegisterFloat(
 			/* name		*/ "rtx_fx_alpha_scalar",
 			/* desc		*/ "Global Effect Alpha Scalar",
-			/* default	*/ 0.5f,
+			/* default	*/ 1.0f,
 			/* minVal	*/ 0.0f,
 			/* maxVal	*/ 2.0f,
 			/* flags	*/ game::dvar_flags::saved);

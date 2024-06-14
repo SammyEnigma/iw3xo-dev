@@ -161,6 +161,8 @@ namespace dvars
 	game::dvar_s* rtx_culling_tweak_smodel = nullptr;
 	game::dvar_s* rtx_culling_plane_dist = nullptr;
 	game::dvar_s* rtx_fx_alpha_scalar = nullptr;
+	game::dvar_s* rtx_fx_cull_elem_draw_radius = nullptr;
+
 
 	game::dvar_s* r_showTess = nullptr;
 	game::dvar_s* r_showTessSkin = nullptr;
