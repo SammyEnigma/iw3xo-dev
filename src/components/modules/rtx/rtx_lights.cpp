@@ -7,6 +7,7 @@ namespace components
 		D3DLIGHT9 light;
 		ZeroMemory(&light, sizeof(D3DLIGHT9));
 
+		const auto dev = game::get_device();
 
 		const auto setup_light_settings = [](D3DLIGHT9* ff_light, rtx_debug_light* setting)
 		{
@@ -157,8 +158,8 @@ namespace components
 			{
 				setup_light_settings(&light, &rtx_debug_lights[i]);
 
-				game::glob::d3d9_device->SetLight(i, &light);
-				game::glob::d3d9_device->LightEnable(i, TRUE);
+				dev->SetLight(i, &light);
+				dev->LightEnable(i, TRUE);
 			}
 			else
 			{
@@ -172,25 +173,23 @@ namespace components
 					light.Position.z += 0.001f;
 					light.Direction.z += 0.001f;
 
-					game::glob::d3d9_device->SetLight(i, &light);
-					game::glob::d3d9_device->LightEnable(i, TRUE);
+					dev->SetLight(i, &light);
+					dev->LightEnable(i, TRUE);
 
 					rtx_debug_lights[i].disable_hack++;
 				}
 				else
 				{
 					// only updates if raytracing is turned off and on again
-					game::glob::d3d9_device->LightEnable(i, FALSE);
+					dev->LightEnable(i, FALSE);
 				}
 			}
 		}
 
 		// needed for fixed-function skysphere (unlit rendering)
-		game::glob::d3d9_device->SetRenderState(D3DRS_LIGHTING, FALSE);
+		dev->SetRenderState(D3DRS_LIGHTING, FALSE);
 	}
 
 	rtx_lights::rtx_lights()
-	{
-		
-	}
+	{ }
 }

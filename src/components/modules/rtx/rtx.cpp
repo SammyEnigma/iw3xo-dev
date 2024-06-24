@@ -1,18 +1,5 @@
 #include "std_include.hpp"
 
-// Notes:
-// * skinned meshes have unstable hashes
-
-// * motion vectors are broken (flickering static meshes)
-// ^ Game Setup -> Parameter Tuning -> Fused World-View Mode set to 'In View Transform' fixes motion vectors but rotates the distant light
-// ^ same applies when distant light is placed via usd.mod
-
-// * running the game with a debug build of remix will throw an assert
-// * running the game with all culling disabled and quickly teleporting around (spawning counts as teleporting) can crash the runtime
-// * dynamic meshes (dynEnts, destr. cars and some other static meshes) are not 'static' (debug view) and create a smear effect (motion vectors)
-
-// * 'r_preTess' (surface batching) set to false + 'rtx_disable_world_culling' set to less (cull full portals only) = almost stable geo hashes
-
 namespace components
 {
 	/**
@@ -22,7 +9,7 @@ namespace components
 	 */
 	void setup_rtx()
 	{
-		const auto dev = game::glob::d3d9_device;
+		const auto dev = game::get_device();
 		const auto data = game::get_backenddata();
 
 		// populate viewParms3D because R_Set3D needs it
@@ -498,6 +485,7 @@ namespace components
 	
 	// *
 	// fix resolution issues by removing duplicates returned by EnumAdapterModes
+	// https://github.com/doitsujin/dxvk/issues/3214
 
 	namespace resolution
 	{
@@ -684,7 +672,7 @@ namespace components
 
 	namespace cull
 	{
-		int _last_active_valid_cell = -1;
+		int _last_active_valid_cell = 0; //-1;
 		void R_AddWorldSurfacesPortalWalk_hk(int camera_cell_index, game::DpvsView* dpvs)
 		{
 			//const auto dpvsGlob = reinterpret_cast<game::DpvsGlob*>(0x3957100);
@@ -1129,7 +1117,6 @@ namespace components
 		dvars::bool_override("r_d3d9ex", false);
 		dvars::bool_override("r_vsync", false);
 		dvars::bool_override("r_preloadShaders", false);
-		dvars::bool_override("r_preloadShaders", false);
 		dvars::bool_override("r_altModelLightingUpdate", false); // prevents loading into a map
 		dvars::bool_override("r_zfeather", false);
 		dvars::bool_override("r_aaAlpha", false);
@@ -1282,7 +1269,6 @@ namespace components
 		{
 			for (auto m = 0u; m < game::gfx_world->dpvs.smodelCount; m++)
 			{
-				auto y = game::gfx_world->dpvs.smodelInsts[m];
 				if (std::string_view(game::gfx_world->dpvs.smodelDrawInsts[m].model->name)._Equal("cs_cargoship_wall_light_on"))
 				{
 					game::gfx_world->dpvs.smodelDrawInsts[m].cullDist = 10000.0f;

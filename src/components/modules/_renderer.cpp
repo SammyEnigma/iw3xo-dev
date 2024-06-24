@@ -5,16 +5,6 @@ namespace components
 	/* ---------------------------------------------------------- */
 	/* ------------ create dynamic rendering buffers ------------ */
 
-	IDirect3DDevice9* get_d3d_device()
-	{
-		if (game::glob::d3d9_device)
-		{
-			return game::glob::d3d9_device;
-		}
-
-		return *game::dx9_device_ptr;
-	}
-
 	// R_AllocDynamicIndexBuffer
 	int alloc_dynamic_index_buffer(IDirect3DIndexBuffer9** ib, int size_in_bytes, const char* buffer_name, bool load_for_renderer)
 	{
@@ -23,7 +13,7 @@ namespace components
 			return 0;
 		}
 		
-		if (HRESULT hr = get_d3d_device()->CreateIndexBuffer(size_in_bytes, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), D3DFMT_INDEX16, D3DPOOL_DEFAULT, ib, nullptr); 
+		if (HRESULT hr = game::get_device()->CreateIndexBuffer(size_in_bytes, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), D3DFMT_INDEX16, D3DPOOL_DEFAULT, ib, nullptr);
 					hr < 0)
 		{
 			const char* msg = utils::function<const char* __stdcall(HRESULT)>(0x685F98)(hr); // R_ErrorDescription
@@ -53,7 +43,7 @@ namespace components
 			return nullptr;
 		}
 
-		if (HRESULT hr = get_d3d_device()->CreateVertexBuffer(size_in_bytes, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), 0, D3DPOOL_DEFAULT, vb, nullptr); 
+		if (HRESULT hr = game::get_device()->CreateVertexBuffer(size_in_bytes, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), 0, D3DPOOL_DEFAULT, vb, nullptr);
 					hr < 0)
 		{
 			const char* msg = utils::function<const char* __stdcall(HRESULT)>(0x685F98)(hr); // R_ErrorDescription
@@ -167,7 +157,7 @@ namespace components
 		if (const auto& r_loadForRenderer = game::Dvar_FindVar("r_loadForRenderer"); 
 						r_loadForRenderer && r_loadForRenderer->current.enabled)
 		{
-			if (HRESULT hr = get_d3d_device()->CreateVertexBuffer(smodel_cache_vb_size, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), 0, D3DPOOL_DEFAULT, &gfx_buf.smodelCacheVb, nullptr); 
+			if (HRESULT hr = game::get_device()->CreateVertexBuffer(smodel_cache_vb_size, (D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY), 0, D3DPOOL_DEFAULT, &gfx_buf.smodelCacheVb, nullptr);
 						hr < 0)
 			{
 				const char* msg = utils::function<const char* __stdcall(HRESULT)>(0x685F98)(hr); // R_ErrorDescription
@@ -458,7 +448,6 @@ namespace components
 		if (	mat
 			 && mat->techniqueSet
 			 && mat->techniqueSet->remappedTechniqueSet
-			 && mat->techniqueSet->remappedTechniqueSet->techniques
 			 && mat->techniqueSet->remappedTechniqueSet->techniques[type])
 		{
 			return true;
@@ -778,7 +767,7 @@ namespace components
 
 	bool dumpedshader_contains(const std::unordered_set<std::string>& set, const std::string& s)
 	{
-		return set.find(s) != set.end();
+		return set.contains(s);
 	}
 
 	void pixelshader_custom_constants(game::GfxCmdBufState* state)

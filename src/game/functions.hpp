@@ -155,7 +155,7 @@ namespace game
 		CreateDebugStringsIfNeeded = 0x461EC0;
 
 	static utils::function<void(game::DebugGlobals *debugGlobalsEntry, const float *origin, const float *color, float scale, const char *string)> 
-		R_AddDebugString = 0x60DD10; // not working currently, or well, not displaying a thing because front/backend is empty?
+		R_AddDebugString = 0x60DD10;
 
 	static utils::function<void(int count, int width, game::GfxPointVertex *verts, bool depthTest)>
 		RB_DrawLines3D = 0x613040;

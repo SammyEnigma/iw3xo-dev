@@ -3,9 +3,6 @@
 // notes:
 // - r_pretess (surface batching) might cause some messed up normals (sometimes noticeable in water puddles)
 
-// todo
-// - disable normal and specularmaps so that remix does not pick them up (less clutter in remix ui)
-
 #define TESS_TESTS // R_DrawTessTechnique test (2d, debug visualization etc.)
 
 namespace components
@@ -74,7 +71,7 @@ namespace components
 			state->prim.streams[0].vb = buffer;
 			state->prim.streams[0].offset = vertex_offset;
 			state->prim.streams[0].stride = stride;
-			state->prim.device->SetStreamSource(0, state->prim.streams[0].vb, state->prim.streams[0].offset, state->prim.streams[0].stride);
+			game::get_device()->SetStreamSource(0, state->prim.streams[0].vb, state->prim.streams[0].offset, state->prim.streams[0].stride);
 		}
 	}
 
@@ -361,7 +358,7 @@ namespace components
 		const auto mem = &game::g_zones[static_cast<std::uint8_t>(surf->zoneHandle)].mem;
 
 		state->prim.indexBuffer = mem->indexBuffer;
-		state->prim.device->SetIndices(mem->indexBuffer);
+		dev->SetIndices(mem->indexBuffer);
 
 		float custom_scalar = 1.0f;
 		auto obj_origin = &model->placement.base.origin[0];
@@ -378,7 +375,7 @@ namespace components
 			custom_scalar = rtx_gui::skysphere_scale;
 
 			// disable fog for skysphere
-			state->prim.device->SetRenderState(D3DRS_FOGENABLE, FALSE);
+			dev->SetRenderState(D3DRS_FOGENABLE, FALSE);
 		}
 
 		// #
@@ -409,8 +406,7 @@ namespace components
 		// draw prim
 
 		const auto offset = ((char*)surf->triIndices - mem->blocks[8].data) >> 1;
-		state->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, offset, surf->triCount);
-
+		dev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, offset, surf->triCount);
 		dev->SetFVF(NULL);
 	}
 
@@ -645,11 +641,11 @@ namespace components
 		}
 
 		// needed or game renders mesh with shaders
-		state->prim.device->SetVertexShader(nullptr);
-		state->prim.device->SetPixelShader(nullptr);
+		dev->SetVertexShader(nullptr);
+		dev->SetPixelShader(nullptr);
 
 		// vertex format
-		state->prim.device->SetFVF(MODEL_VERTEX_FORMAT);
+		dev->SetFVF(MODEL_VERTEX_FORMAT);
 
 		// #
 		// build world matrix
@@ -670,7 +666,7 @@ namespace components
 			}
 
 			// draw the prim
-			state->prim.device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, start_index, surf->triCount);
+			dev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, surf->vertCount, start_index, surf->triCount);
 		}
 
 		dev->SetFVF(NULL);
@@ -716,6 +712,7 @@ namespace components
 		world_mtx.m[1][1] = 1.0f;
 		world_mtx.m[2][2] = 1.0f;
 		world_mtx.m[3][3] = 1.0f;
+
 		dev->SetTransform(D3DTS_WORLD, reinterpret_cast<D3DMATRIX*>(&world_mtx.m[0]));
 
 		// texture alpha + vertex alpha (decal blending)
@@ -991,7 +988,7 @@ namespace components
 			}
 		}
 
-		prim->device->SetFVF(NULL);
+		dev->SetFVF(NULL);
 		return draw_surf_index;
 	}
 
@@ -1448,7 +1445,7 @@ namespace components
 					v->color = src_vert->color.packed;
 					v_model->color = v->color;
 
-					// there are two types of vertex types in the og buffer
+					// there are two vertex types in the og buffer
 					// 1) world (bsp brush) verts with unpacked texcoords (stride = 44)
 					// 2) model verts with packed texcoords (stride = 36)
 					// -> determine the type by checking if the last 2 elements are 0
