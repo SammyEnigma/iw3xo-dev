@@ -24,6 +24,7 @@ custom movement options and much more
 <img src="https://raw.githubusercontent.com/xoxor4d/xoxor4d.github.io/master/assets/img/daynight/small_gif.gif"/>
 
 <br>
+<br>
 
 __[ Remix compatibility ]__   
 tweak sunlight, fog and skybox per map -- spawning of unique anchor meshes to attach new prims --  
@@ -96,7 +97,8 @@ or directly run `iw3xo.exe`
 
 🔷 It does _not_ enhance materials or meshes 🔷  
 
-My actual remix-mod with enhanced materials, meshes and lights can be found over at ModDB: (soon)
+My actual remix-mod with enhanced materials, meshes and lights can be found over at ModDB:  
+https://www.moddb.com/mods/cod4-mp-rtx-remix-iw3xo
 </div>
 
 <br>
